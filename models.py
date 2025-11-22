@@ -38,6 +38,6 @@ class UserAction(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer)
     bvid = db.Column(db.String(20))
-    action_type = db.Column(db.String(20)) # 'fav' 或 'todo'
+    action_type = db.Column(db.String(20)) # 'fav'、'todo' 或 'history'
     status = db.Column(db.Integer, default=0)
     create_time = db.Column(db.DateTime, default=func.now())

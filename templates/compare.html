@@ -28,6 +28,8 @@
         color: #333;
         height: 50px;
         transition: all 0.3s;
+        text-align: center;
+        text-align-last: center;
     }
 
     /* 选中时的边框色，对应 B 站蓝粉 */
@@ -50,6 +52,11 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
+    }
+
+    .radar-title {
+        font-size: 1.15rem;
+        letter-spacing: 1px;
     }
 
     /* 名字标签 */
@@ -76,6 +83,9 @@
                 <select id="select-up1" class="form-select custom-select select-blue" onchange="updateNames()">
                     {% for up in up_list %}<option value="{{up}}">{{up}}</option>{% endfor %}
                 </select>
+                <div class="ms-3 d-none d-md-block text-start" style="width: 40px;">
+                    <i class="fas fa-robot fa-2x" style="color: #6c757d;"></i>
+                </div>
             </div>
         </div>
 
@@ -86,12 +96,15 @@
 
         <!-- 红方 -->
         <div class="col-md-5">
-            <div class="d-flex align-items-center">
-                <select id="select-up2" class="form-select custom-select select-pink text-end" dir="rtl" onchange="updateNames()">
+            <div class="d-flex align-items-center justify-content-end">
+                <div class="me-3 d-none d-md-block text-end" style="width: 40px;">
+                    <i class="fas fa-user-ninja fa-2x" style="color: var(--bili-pink);"></i>
+                </div>
+                <select id="select-up2" class="form-select custom-select select-pink" onchange="updateNames()">
                     {% for up in up_list %}<option value="{{up}}" {% if loop.index==2 %}selected{% endif %}>{{up}}</option>{% endfor %}
                 </select>
-                <div class="ms-3 d-none d-md-block" style="width: 40px;">
-                    <i class="fas fa-user-tag fa-2x" style="color: var(--bili-pink);"></i>
+                <div class="ms-3 d-none d-md-block text-start" style="width: 40px;">
+                    <i class="fas fa-robot fa-2x" style="color: #6c757d;"></i>
                 </div>
             </div>
         </div>
@@ -111,16 +124,7 @@
     <!-- 左侧：五维雷达图 -->
     <div class="col-lg-6">
         <div class="card h-100 p-4 shadow-sm">
-            <div class="card-header-custom">
-                <span><i class="fas fa-radar-chart me-2 text-muted"></i>综合能力模型</span>
-                <!-- 动态显示当前对比的名字 -->
-                <div>
-                    <span class="badge-name badge-blue me-1" id="radar-name1">UP1</span>
-                    <span class="text-muted small">vs</span>
-                    <span class="badge-name badge-pink ms-1" id="radar-name2">UP2</span>
-                </div>
-            </div>
-            <!-- 去掉了下方冗余文字，增加高度，让图表撑满 -->
+            <div class="text-center fw-bold radar-title mb-3"><i class="fas fa-radar-chart me-2 text-muted"></i>综合能力模型</div>
             <div id="radarChart" style="height: 500px; width: 100%;"></div>
         </div>
     </div>
@@ -131,18 +135,16 @@
             <div class="card-body p-0">
                 <!-- 上半部分：蓝方词云 -->
                 <div class="p-3 border-bottom" style="height: 50%;">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="d-flex justify-content-start align-items-center mb-2">
                         <span class="badge-name badge-blue fw-bold" id="cloud-name1">UP1</span>
-                        <span class="text-muted small"><i class="fas fa-fingerprint me-1"></i>关键词画像</span>
                     </div>
                     <div id="wordCloud1" style="height: 220px;"></div>
                 </div>
 
                 <!-- 下半部分：红方词云 -->
                 <div class="p-3" style="height: 50%;">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="d-flex justify-content-start align-items-center mb-2">
                         <span class="badge-name badge-pink fw-bold" id="cloud-name2">UP2</span>
-                        <span class="text-muted small"><i class="fas fa-fingerprint me-1"></i>关键词画像</span>
                     </div>
                     <div id="wordCloud2" style="height: 220px;"></div>
                 </div>
@@ -163,8 +165,6 @@ const COLOR_PINK = '#FB7299'; // var(--bili-pink)
 function updateNames() {
     const n1 = $('#select-up1').val();
     const n2 = $('#select-up2').val();
-    $('#radar-name1').text(n1);
-    $('#radar-name2').text(n2);
     $('#cloud-name1').text(n1);
     $('#cloud-name2').text(n2);
 }

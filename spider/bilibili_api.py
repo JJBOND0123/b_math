@@ -45,7 +45,7 @@ SEARCH_MAP = {
     '专升本 高数': '专升本专区'
 }
 
-MAX_PAGES = 5  # 演示用，抓取2页
+MAX_PAGES = 5  # 演示用，抓取 5 页
 
 # ==================================================
 
@@ -97,7 +97,11 @@ def parse_time(timestamp):
 
 def parse_duration(duration_str):
     try:
-        if isinstance(duration_str, int): return duration_str
+        if isinstance(duration_str, int):
+            return duration_str
+        if isinstance(duration_str, str) and duration_str.isdigit():
+            return int(duration_str)
+
         parts = duration_str.split(':')
         if len(parts) == 2:
             return int(parts[0]) * 60 + int(parts[1])
