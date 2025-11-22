@@ -228,12 +228,12 @@ def compare_data():
         # 归一化逻辑 (调整了权重，使其更符合实际感知)
         score_prod = min(count * 2, 100)  # 产出积累 (量)
         score_pop = min(total_views / 200000 * 100, 100)  # 流量层级 (热度)
-        score_rep = min(avg_score * 2, 100)  # 内容质量 (干货)
+        score_rep = min(avg_score * 2, 100)  # 内容质量 (收藏率衍生)
         score_inter = min(interaction_rate * 200 * 100, 100)  # 粉丝粘性 (互动)
-        score_hard = avg_score  # 硬核指数 (原干货率)
+        score_hard = avg_score  # 收藏率指标 (原干货率)
 
         # 调整顺序以匹配前端雷达图顺时针方向：
-        # 产出 -> 流量 -> 质量 -> 粘性 -> 硬核
+        # 产出 -> 流量 -> 质量 -> 粘性 -> 收藏率
         stats = [
             round(score_prod, 1),
             round(score_pop, 1),

@@ -63,27 +63,10 @@
     .text-blue { color: var(--tech-blue); }
     .text-pink { color: var(--bili-pink); }
 
- codex/fix-spelling-error-and-code-issues-7j1q1q
     .stats-table th { border-bottom: 1px dashed #e0e6ed; font-weight: 700; }
     .stats-table td { border-top: none; padding: 9px 8px; }
 
     .panel-card { border: 1px solid #f0f2f5; }
-
-    .radar-title {
-        font-size: 1.15rem;
-        letter-spacing: 1px;
-    }
-
-    /* 名字标签 */
-    .badge-name {
-        font-size: 0.9rem;
-        padding: 5px 12px;
-        border-radius: 20px;
-        font-weight: normal;
-    }
-    .badge-blue { background: rgba(0, 161, 214, 0.1); color: var(--tech-blue); }
-    .badge-pink { background: rgba(251, 114, 153, 0.1); color: var(--bili-pink); }
- main
 
     .primary-action {
         font-size: 1rem;
@@ -104,7 +87,6 @@
                         {% for up in up_list %}<option value="{{up}}">{{up}}</option>{% endfor %}
                     </select>
                 </div>
- codex/fix-spelling-error-and-code-issues-7j1q1q
             </div>
         </div>
 
@@ -113,7 +95,6 @@
             <div class="text-muted small mt-2">强强对照</div>
         </div>
 
- codex/fix-spelling-error-and-code-issues-7j1q1q
         <div class="col-lg-5">
             <div class="up-card up-card-pink justify-content-end">
                 <div class="flex-grow-1 text-end me-3">
@@ -136,7 +117,6 @@
 
 <div class="row g-4">
     <div class="col-lg-6">
- codex/fix-spelling-error-and-code-issues-7j1q1q
         <div class="card h-100 p-4 shadow-sm panel-card">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <div>
@@ -159,7 +139,7 @@
                         <tr><td>流量层级</td><td id="stat-pop" class="text-blue fw-bold">-</td><td id="stat-pop-2" class="text-pink fw-bold">-</td></tr>
                         <tr><td>内容质量</td><td id="stat-qual" class="text-blue fw-bold">-</td><td id="stat-qual-2" class="text-pink fw-bold">-</td></tr>
                         <tr><td>粉丝粘性</td><td id="stat-stick" class="text-blue fw-bold">-</td><td id="stat-stick-2" class="text-pink fw-bold">-</td></tr>
-                        <tr><td>硬核指数</td><td id="stat-hard" class="text-blue fw-bold">-</td><td id="stat-hard-2" class="text-pink fw-bold">-</td></tr>
+                        <tr><td>收藏率（千播收藏）</td><td id="stat-hard" class="text-blue fw-bold">-</td><td id="stat-hard-2" class="text-pink fw-bold">-</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -167,7 +147,6 @@
     </div>
 
     <div class="col-lg-6">
- codex/fix-spelling-error-and-code-issues-7j1q1q
         <div class="card h-100 p-4 shadow-sm panel-card">
             <div class="d-flex justify-content-between align-items-center card-header-custom mb-3">
                 <div><i class="fas fa-chart-bar me-2 text-muted"></i>关键词对比</div>
@@ -191,7 +170,7 @@ const METRICS = [
     {key: 'pop', label: '流量层级', index: 1},
     {key: 'qual', label: '内容质量', index: 2},
     {key: 'stick', label: '粉丝粘性', index: 3},
-    {key: 'hard', label: '硬核指数', index: 4}
+    {key: 'hard', label: '收藏率（千播收藏）', index: 4}
 ];
 
 function placeholderAvatar(name, color) {
@@ -212,12 +191,10 @@ function getAvatar(name, color) {
 function updateNames() {
     const n1 = $('#select-up1').val();
     const n2 = $('#select-up2').val();
- codex/fix-spelling-error-and-code-issues-7j1q1q
     $('#legend-name1').text(n1 || 'UP1');
     $('#legend-name2').text(n2 || 'UP2');
     $('#avatar1').attr('src', getAvatar(n1, COLOR_BLUE));
     $('#avatar2').attr('src', getAvatar(n2, COLOR_PINK));
-
 }
 
 function startPK() {
@@ -256,7 +233,7 @@ function renderRadar(name1, name2, data1, data2) {
                 { name: '流量层级', max: 100 },
                 { name: '内容质量', max: 100 },
                 { name: '粉丝粘性', max: 100 },
-                { name: '硬核指数', max: 100 }
+                { name: '收藏率（千播收藏）', max: 100 }
             ],
             axisName: { color: '#555', fontWeight: 'bold', fontSize: 14 },
             splitArea: { show: true, areaStyle: { color: ['#fff', '#f7f8fb'] } },

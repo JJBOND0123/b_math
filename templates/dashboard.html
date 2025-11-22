@@ -35,7 +35,7 @@
     <div class="col-md-3">
         <div class="card border-0 shadow-sm h-100 card-gradient-pink hover-up p-3">
             <div class="d-flex justify-content-between align-items-center text-white">
-                <div><div class="opacity-75 small text-uppercase fw-bold">平均含金量</div><div class="display-6 fw-bold" id="val-score">-</div></div>
+                <div><div class="opacity-75 small text-uppercase fw-bold">平均收藏率</div><div class="display-6 fw-bold" id="val-score">-</div></div>
                 <i class="fas fa-star fa-3x opacity-25"></i>
             </div>
         </div>
@@ -52,11 +52,11 @@
 
 <!-- 第二层：榜单与分布 -->
 <div class="row g-3 mb-4">
-    <!-- 左侧：干货排行榜 -->
+    <!-- 左侧：收藏率排行榜 -->
     <div class="col-md-8">
         <div class="card border-0 shadow-sm h-100 rounded-4">
             <div class="card-header bg-transparent border-0 pt-4 ps-4">
-                <h6 class="fw-bold text-dark"><i class="fas fa-crown text-warning me-2"></i>全站视频“含金量” Top 8 <small class="text-muted ms-2 fw-normal" style="font-size: 0.8rem;">(点击跳转)</small></h6>
+                <h6 class="fw-bold text-dark"><i class="fas fa-crown text-warning me-2"></i>全站视频“收藏率” Top 8 <small class="text-muted ms-2 fw-normal" style="font-size: 0.8rem;">(点击跳转)</small></h6>
             </div>
             <div class="card-body">
                 <div id="rankChart" style="height: 350px;"></div>
@@ -120,11 +120,11 @@
         });
     });
 
-    // 1. 干货榜
+    // 1. 收藏率榜
     function initRankChart(titles, scores, bvids) {
         var chart = echarts.init(document.getElementById('rankChart'));
         chart.setOption({
-            tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, formatter: '{b}: 干货值 {c}' },
+            tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, formatter: '{b}: 收藏率 {c}' },
             grid: { left: '3%', right: '8%', bottom: '3%', top: '3%', containLabel: true },
             xAxis: { type: 'value', splitLine: { show: false } },
             yAxis: {
@@ -133,7 +133,7 @@
                 axisLine: { show: false }, axisTick: { show: false }
             },
             series: [{
-                name: '含金量', type: 'bar', data: scores, barWidth: '50%',
+                name: '收藏率（每千次播放收藏量）', type: 'bar', data: scores, barWidth: '50%',
                 itemStyle: { borderRadius: [0, 10, 10, 0], color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#00A1D6' }, { offset: 1, color: '#00F2FE' }]) },
                 label: { show: true, position: 'right', fontWeight: 'bold', color: '#666' }
             }]
@@ -186,13 +186,13 @@
                             <span style="font-weight:bold; color:#00A1D6">${params.data[3]}</span><br/>
                             ${params.data[2]}<br/>
                             ⏱️ 时长: <b>${params.data[0]}</b> 分<br/>
-                            🔥 含金量: <b>${params.data[1]}</b>
+                            🔥 收藏率: <b>${params.data[1]}</b> (每千次播放收藏量)
                             </div>`;
                 }
             },
             grid: { left: '5%', right: '5%', bottom: '10%', top: '10%' },
             xAxis: { name: '时长(分)', type: 'value', splitLine: { lineStyle: { type: 'dashed' } } },
-            yAxis: { name: '含金量', type: 'value', splitLine: { lineStyle: { type: 'dashed' } } },
+            yAxis: { name: '收藏率（千播收藏）', type: 'value', splitLine: { lineStyle: { type: 'dashed' } } },
             series: [{
                 symbolSize: 10,
                 data: data,

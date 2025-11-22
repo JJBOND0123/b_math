@@ -9,7 +9,7 @@
 
     <div class="d-flex bg-white p-1 rounded-pill shadow-sm border">
         <button type="button" class="btn btn-sort rounded-pill active px-4 py-1 small fw-bold" onclick="changeSort('dry_goods', this)">
-            硬核指数
+            收藏率（每千次播放收藏）
         </button>
         <button type="button" class="btn btn-sort rounded-pill px-4 py-1 small fw-bold" onclick="changeSort('views', this)">
             播放量
@@ -134,7 +134,7 @@
                             <span class="text-secondary small"><i class="fas fa-play-circle me-1"></i>${viewStr}</span>
                             <!-- ✅ Tooltip 提示 -->
                             <div class="d-flex align-items-center text-danger small fw-bold"
-                                 data-bs-toggle="tooltip" data-bs-placement="top" title="硬核指数：(收藏数/播放量)*1000，分数越高代表内容越干货">
+                                 data-bs-toggle="tooltip" data-bs-placement="top" title="收藏率 = (收藏数/播放量)*1000，数值越高代表同等播放下更受青睐">
                                 <i class="fas fa-fire me-1"></i> ${v.score}
                             </div>
                         </div>

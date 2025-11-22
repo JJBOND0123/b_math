@@ -200,8 +200,8 @@
                     <div class="card-body p-3">
                         <h6 class="card-title text-truncate">${v.title}</h6>
                         <div class="mt-2 d-flex justify-content-between">
-                            <!-- ✅ 优化后的显示：硬核指数 -->
-                            <span class="badge bg-warning text-dark" data-bs-toggle="tooltip" title="硬核指数：基于收藏/播放比计算">🔥 ${v.score}</span>
+                            <!-- ✅ 优化后的显示：收藏率（每千播放收藏） -->
+                            <span class="badge bg-warning text-dark" data-bs-toggle="tooltip" title="收藏率：基于收藏/播放比计算">🔥 ${v.score}</span>
                             <button class="btn btn-sm btn-link text-danger p-0" onclick="removeAction('${v.bvid}', 'fav')">取消收藏</button>
                         </div>
                     </div>
