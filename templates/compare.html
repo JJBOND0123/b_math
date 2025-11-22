@@ -11,45 +11,33 @@
 
     .up-card {
         border-radius: 14px;
-        padding: 14px 16px;
+        padding: 18px 16px;
         display: flex;
         align-items: center;
         gap: 12px;
         background: #fff;
         box-shadow: 0 6px 18px rgba(0,0,0,0.04);
+        border: 1px solid #f1f3f7;
     }
-    .up-card-blue { border: 1px solid rgba(0, 161, 214, 0.25); }
-    .up-card-pink { border: 1px solid rgba(251, 114, 153, 0.25); }
+    .up-card-blue { border-color: rgba(0, 161, 214, 0.2); }
+    .up-card-pink { border-color: rgba(251, 114, 153, 0.2); }
 
-    .up-avatar {
-        width: 64px;
-        height: 64px;
-        border-radius: 16px;
-        object-fit: cover;
-        box-shadow: 0 8px 20px rgba(0,0,0,0.08);
-        border: 2px solid #fff;
-    }
-
-    .vs-badge {
-        width: 72px;
-        height: 72px;
-        line-height: 72px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #00A1D6, #FB7299);
-        color: white;
-        font-weight: 800;
-        letter-spacing: 1px;
-        margin: 0 auto;
-        font-size: 1.2rem;
+    .vs-text {
+        font-weight: 900;
+        font-size: 1.7rem;
+        background: linear-gradient(90deg, #00A1D6 0%, #FB7299 100%);
+        -webkit-background-clip: text;
+        color: transparent;
+        letter-spacing: 2px;
     }
 
     .custom-select {
         border: 2px solid transparent;
         background-color: var(--bg-gray);
-        border-radius: 10px;
+        border-radius: 12px;
         font-weight: 700;
         color: #222;
-        height: 50px;
+        height: 52px;
         transition: all 0.3s;
         text-align: center;
         text-align-last: center;
@@ -67,7 +55,6 @@
     .stats-table td { border-top: none; padding: 9px 8px; }
 
     .panel-card { border: 1px solid #f0f2f5; }
-
     .primary-action {
         font-size: 1rem;
         letter-spacing: 0.5px;
@@ -80,9 +67,8 @@
     <div class="row g-3 align-items-center">
         <div class="col-lg-5">
             <div class="up-card up-card-blue">
-                <img id="avatar1" class="up-avatar" src="{{ up_avatars.get(up_list[0]) if up_list else 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2296%22 height=%2296%22%3E%3Crect width=%2296%22 height=%2296%22 rx=%2216%22 ry=%2216%22 fill=%22%2300A1D6%22/%3E%3Ctext x=%2250%25%22 y=%2255%25%22 font-size=%2234%22 fill=%22white%22 text-anchor=%22middle%22 font-family=%22Arial%22%3EUP%3C/text%3E%3C/svg%3E' }}" alt="UP1 头像">
                 <div class="flex-grow-1">
-                    <div class="text-muted small mb-1">UP 主 A</div>
+                    <div class="text-muted small mb-1">选择对比的 UP 主</div>
                     <select id="select-up1" class="form-select custom-select select-blue text-center" onchange="updateNames()">
                         {% for up in up_list %}<option value="{{up}}">{{up}}</option>{% endfor %}
                     </select>
@@ -90,15 +76,14 @@
             </div>
         </div>
 
-        <div class="col-lg-2 text-center">
-            <div class="vs-badge">VS</div>
-            <div class="text-muted small mt-2">强强对照</div>
+        <div class="col-lg-2 text-center d-flex flex-column align-items-center">
+            <div class="vs-text">VS</div>
+            <div class="text-muted small">真实对照</div>
         </div>
-
         <div class="col-lg-5">
             <div class="up-card up-card-pink justify-content-end">
                 <div class="flex-grow-1 text-end me-3">
-                    <div class="text-muted small mb-1">UP 主 B</div>
+                    <div class="text-muted small mb-1">选择对比的 UP 主</div>
                     <select id="select-up2" class="form-select custom-select select-pink text-center" onchange="updateNames()">
                         {% for up in up_list %}<option value="{{up}}" {% if loop.index==2 %}selected{% endif %}>{{up}}</option>{% endfor %}
                     </select>
@@ -135,11 +120,11 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr><td>产出积累</td><td id="stat-prod" class="text-blue fw-bold">-</td><td id="stat-prod-2" class="text-pink fw-bold">-</td></tr>
-                        <tr><td>流量层级</td><td id="stat-pop" class="text-blue fw-bold">-</td><td id="stat-pop-2" class="text-pink fw-bold">-</td></tr>
-                        <tr><td>内容质量</td><td id="stat-qual" class="text-blue fw-bold">-</td><td id="stat-qual-2" class="text-pink fw-bold">-</td></tr>
-                        <tr><td>粉丝粘性</td><td id="stat-stick" class="text-blue fw-bold">-</td><td id="stat-stick-2" class="text-pink fw-bold">-</td></tr>
-                        <tr><td>收藏率（千播收藏）</td><td id="stat-hard" class="text-blue fw-bold">-</td><td id="stat-hard-2" class="text-pink fw-bold">-</td></tr>
+                        <tr><td>产出积累（个视频）</td><td id="stat-prod" class="text-blue fw-bold">-</td><td id="stat-prod-2" class="text-pink fw-bold">-</td></tr>
+                        <tr><td>流量层级（次播放）</td><td id="stat-pop" class="text-blue fw-bold">-</td><td id="stat-pop-2" class="text-pink fw-bold">-</td></tr>
+                        <tr><td>内容质量（投币率）</td><td id="stat-qual" class="text-blue fw-bold">-</td><td id="stat-qual-2" class="text-pink fw-bold">-</td></tr>
+                        <tr><td>粉丝粘性（互动率）</td><td id="stat-stick" class="text-blue fw-bold">-</td><td id="stat-stick-2" class="text-pink fw-bold">-</td></tr>
+                        <tr><td>收藏率（%）</td><td id="stat-hard" class="text-blue fw-bold">-</td><td id="stat-hard-2" class="text-pink fw-bold">-</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -149,10 +134,10 @@
     <div class="col-lg-6">
         <div class="card h-100 p-4 shadow-sm panel-card">
             <div class="d-flex justify-content-between align-items-center card-header-custom mb-3">
-                <div><i class="fas fa-chart-bar me-2 text-muted"></i>关键词对比</div>
-                <span class="badge bg-light text-muted">Top 5</span>
+                <div><i class="fas fa-cloud me-2 text-muted"></i>关键词词云</div>
+                <span class="badge bg-light text-muted">来源：数据库</span>
             </div>
-            <div id="keywordBar" style="height: 480px;"></div>
+            <div id="keywordCloud" style="height: 480px;"></div>
         </div>
     </div>
 </div>
@@ -163,38 +148,21 @@
 let radarChart, keywordChart;
 const COLOR_BLUE = '#00A1D6';
 const COLOR_PINK = '#FB7299';
-const upAvatars = {{ up_avatars|tojson }};
 
 const METRICS = [
-    {key: 'prod', label: '产出积累', index: 0},
-    {key: 'pop', label: '流量层级', index: 1},
-    {key: 'qual', label: '内容质量', index: 2},
-    {key: 'stick', label: '粉丝粘性', index: 3},
-    {key: 'hard', label: '收藏率（千播收藏）', index: 4}
+    {key: 'prod', label: '产出积累', unit: '个视频', index: 0},
+    {key: 'pop', label: '流量层级', unit: '次播放', index: 1},
+    {key: 'qual', label: '内容质量（投币率）', unit: '%', index: 2},
+    {key: 'stick', label: '粉丝粘性（互动率）', unit: '%', index: 3},
+    {key: 'hard', label: '收藏率', unit: '%', index: 4}
 ];
-
-function placeholderAvatar(name, color) {
-    const initials = (name || 'UP').slice(0, 2);
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120">
-        <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="${color}" stop-opacity="0.95"/><stop offset="100%" stop-color="#222" stop-opacity="0.75"/></linearGradient></defs>
-        <rect rx="20" ry="20" width="120" height="120" fill="url(#g)" />
-        <text x="50%" y="55%" font-family="Arial" font-size="42" fill="#fff" text-anchor="middle">${initials}</text>
-    </svg>`;
-    return `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svg)))}`;
-}
-
-function getAvatar(name, color) {
-    if (name && upAvatars && upAvatars[name]) return upAvatars[name];
-    return placeholderAvatar(name, color);
-}
 
 function updateNames() {
     const n1 = $('#select-up1').val();
     const n2 = $('#select-up2').val();
     $('#legend-name1').text(n1 || 'UP1');
     $('#legend-name2').text(n2 || 'UP2');
-    $('#avatar1').attr('src', getAvatar(n1, COLOR_BLUE));
-    $('#avatar2').attr('src', getAvatar(n2, COLOR_PINK));
+
 }
 
 function startPK() {
@@ -203,16 +171,16 @@ function startPK() {
     updateNames();
 
     if (!radarChart) radarChart = echarts.init(document.getElementById('radarChart'));
-    if (!keywordChart) keywordChart = echarts.init(document.getElementById('keywordBar'));
+    if (!keywordChart) keywordChart = echarts.init(document.getElementById('keywordCloud'));
     radarChart.showLoading({color: '#666'});
     keywordChart.showLoading({color: '#666'});
 
     $.get('/api/compare_data', {up1: up1, up2: up2}, function(res) {
         radarChart.hideLoading();
         keywordChart.hideLoading();
-        renderRadar(up1, up2, res.up1_stats, res.up2_stats);
-        renderStatsTable(res.up1_stats, res.up2_stats);
-        renderKeywordBar(up1, up2, res.up1_words, res.up2_words);
+        renderRadar(up1, up2, res.up1.radar, res.up2.radar);
+        renderStatsTable(res.up1.metrics, res.up2.metrics);
+        renderKeywordCloud(up1, up2, res.up1.words, res.up2.words);
     });
 }
 
@@ -231,9 +199,9 @@ function renderRadar(name1, name2, data1, data2) {
             indicator: [
                 { name: '产出积累', max: 100 },
                 { name: '流量层级', max: 100 },
-                { name: '内容质量', max: 100 },
-                { name: '粉丝粘性', max: 100 },
-                { name: '收藏率（千播收藏）', max: 100 }
+                { name: '内容质量（投币率）', max: 100 },
+                { name: '粉丝粘性（互动率）', max: 100 },
+                { name: '收藏率（%）', max: 100 }
             ],
             axisName: { color: '#555', fontWeight: 'bold', fontSize: 14 },
             splitArea: { show: true, areaStyle: { color: ['#fff', '#f7f8fb'] } },
@@ -257,65 +225,58 @@ function renderRadar(name1, name2, data1, data2) {
 
 function renderStatsTable(data1, data2) {
     METRICS.forEach(m => {
-        const v1 = data1 ? data1[m.index] : '-';
-        const v2 = data2 ? data2[m.index] : '-';
-        $(`#stat-${m.key}`).text(v1);
-        $(`#stat-${m.key}-2`).text(v2);
+        const v1 = data1 ? data1[m.key] : null;
+        const v2 = data2 ? data2[m.key] : null;
+        $(`#stat-${m.key}`).text(formatMetric(v1));
+        $(`#stat-${m.key}-2`).text(formatMetric(v2));
     });
 }
 
-function renderKeywordBar(name1, name2, words1 = [], words2 = []) {
-    const map1 = {};
-    const map2 = {};
-    words1.slice(0, 5).forEach(w => map1[w.name] = w.value);
-    words2.slice(0, 5).forEach(w => map2[w.name] = w.value);
-
-    const categories = Array.from(new Set([...Object.keys(map1), ...Object.keys(map2)]));
-    categories.sort((a, b) => Math.max(map1[b] || 0, map2[b] || 0) - Math.max(map1[a] || 0, map2[a] || 0));
-
-    const dataBlue = categories.map(c => map1[c] || 0);
-    const dataPink = categories.map(c => map2[c] || 0);
+function renderKeywordCloud(name1, name2, words1 = [], words2 = []) {
+    const combinedWords = [];
+    words1.forEach(w => combinedWords.push({
+        name: `${w.name} (${name1})`,
+        value: w.value,
+        textStyle: { color: COLOR_BLUE }
+    }));
+    words2.forEach(w => combinedWords.push({
+        name: `${w.name} (${name2})`,
+        value: w.value,
+        textStyle: { color: COLOR_PINK }
+    }));
 
     const option = {
-        color: [COLOR_BLUE, COLOR_PINK],
         tooltip: {
-            trigger: 'axis',
-            axisPointer: { type: 'shadow' },
-            formatter: params => {
-                const items = params.map(p => `${p.marker} ${p.seriesName}: ${p.value}`);
-                return `${params[0].name}<br/>${items.join('<br/>')}`;
-            }
+            formatter: (item) => `${item.data.name}: ${item.data.value}`
         },
-        legend: { top: 0, data: [name1, name2] },
-        grid: { left: '6%', right: '6%', top: 40, bottom: 20, containLabel: true },
-        xAxis: { type: 'value', splitLine: { show: false } },
-        yAxis: {
-            type: 'category',
-            data: categories,
-            axisLabel: {
-                formatter: function (value) {
-                    return value.length > 8 ? value.slice(0, 8) + '…' : value;
-                }
-            }
-        },
-        series: [
-            {
-                name: name1,
-                type: 'bar',
-                data: dataBlue,
-                barWidth: 14,
-                itemStyle: { borderRadius: [6, 6, 6, 6] }
+        series: [{
+            type: 'wordCloud',
+            shape: 'circle',
+            gridSize: 8,
+            sizeRange: [14, 46],
+            rotationRange: [-30, 30],
+            textStyle: {
+                fontFamily: 'PingFang SC, sans-serif'
             },
-            {
-                name: name2,
-                type: 'bar',
-                data: dataPink,
-                barWidth: 14,
-                itemStyle: { borderRadius: [6, 6, 6, 6] }
-            }
-        ]
+            data: combinedWords
+        }]
     };
     keywordChart.setOption(option);
+}
+
+function formatMetric(metric) {
+    if (!metric || metric.value === undefined || metric.value === null) return '-';
+    const value = metric.value;
+    const unit = metric.unit || '';
+
+    if (unit.includes('播放')) {
+        return value >= 10000 ? `${(value / 10000).toFixed(1)} 万次播放` : `${value} 次播放`;
+    }
+    if (unit === '%') {
+        return `${parseFloat(value).toFixed(2)}%`;
+    }
+    return `${value} ${unit}`;
+
 }
 
 window.addEventListener('resize', function() {

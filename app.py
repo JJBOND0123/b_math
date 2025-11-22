@@ -83,17 +83,7 @@ def resources(): return render_template('resources.html', active='resources')
 def compare():
     ups = db.session.query(Video.up_name).distinct().all()
     up_list = [u[0] for u in ups]
-
-    # 预加载每个 UP 的封面作为头像占位
-    videos = db.session.query(Video.up_name, Video.pic_url, Video.pubdate) \
-        .order_by(Video.up_name, Video.pubdate.desc()).all()
-    up_avatars = {}
-    for up_name, pic_url, _ in videos:
-        if up_name not in up_avatars and pic_url:
-            up_avatars[up_name] = pic_url
-
-    return render_template('compare.html', active='compare', up_list=up_list, up_avatars=up_avatars)
-
+    return render_template('compare.html', active='compare', up_list=up_list)
 
 @app.route('/recommend')
 @login_required
@@ -210,41 +200,67 @@ def compare_data():
     up1 = request.args.get('up1')
     up2 = request.args.get('up2')
 
+    # 计算各 UP 真实数据的聚合，避免模拟占位
+    summaries = db.session.query(
+        Video.up_name,
+        func.count(Video.bvid).label('video_count'),
+        func.sum(Video.view_count).label('total_views'),
+        func.sum(Video.favorite_count).label('total_fav'),
+        func.sum(Video.reply_count).label('total_reply'),
+        func.sum(Video.danmaku_count).label('total_danmaku'),
+        func.sum(Video.share_count).label('total_share'),
+        func.sum(Video.coin_count).label('total_coin')
+    ).group_by(Video.up_name).all()
+
+    summary_map = {s.up_name: s for s in summaries}
+
+    def safe_rate(numerator, denominator):
+        return round((numerator / denominator) * 100, 2) if denominator else 0
+
+    def normalize(value, max_value):
+        if not max_value:
+            return 0
+        return round(min(value / max_value * 100, 100), 1)
+
+    # 以全量数据的最高值作为雷达归一化基准
+    prod_max = max((s.video_count or 0) for s in summaries) if summaries else 1
+    pop_max = max((s.total_views or 0) for s in summaries) if summaries else 1
+    coin_rate_max = max(
+        safe_rate(s.total_coin or 0, s.total_views or 0) for s in summaries
+    ) if summaries else 1
+    engage_rate_max = max(
+        safe_rate((s.total_reply or 0) + (s.total_danmaku or 0) + (s.total_share or 0), s.total_views or 0)
+        for s in summaries
+    ) if summaries else 1
+    fav_rate_max = max(
+        safe_rate(s.total_fav or 0, s.total_views or 0) for s in summaries
+    ) if summaries else 1
+
     def get_up_data(up_name):
-        videos = Video.query.filter_by(up_name=up_name).all()
-        if not videos:
-            return [0] * 5, []
+        summary = summary_map.get(up_name)
+        if not summary:
+            return {'radar': [0] * 5, 'metrics': {}, 'words': []}
 
-        count = len(videos)
-        total_views = sum(v.view_count for v in videos)
-        total_reply = sum(v.reply_count for v in videos)
-        # 防止除以零
-        avg_score = sum(v.dry_goods_ratio for v in videos) / count if count > 0 else 0
+        total_views = summary.total_views or 0
+        video_count = summary.video_count or 0
+        favorite_rate = safe_rate(summary.total_fav or 0, total_views)
+        coin_rate = safe_rate(summary.total_coin or 0, total_views)
+        engagement_rate = safe_rate(
+            (summary.total_reply or 0) + (summary.total_danmaku or 0) + (summary.total_share or 0),
+            total_views
+        )
 
-        # 计算互动率 (评论/播放)，并在合理范围内归一化
-        # 假设 1% 的评论率是极高的 (100分)
-        interaction_rate = (total_reply / total_views) if total_views > 0 else 0
-
-        # 归一化逻辑 (调整了权重，使其更符合实际感知)
-        score_prod = min(count * 2, 100)  # 产出积累 (量)
-        score_pop = min(total_views / 200000 * 100, 100)  # 流量层级 (热度)
-        score_rep = min(avg_score * 2, 100)  # 内容质量 (收藏率衍生)
-        score_inter = min(interaction_rate * 200 * 100, 100)  # 粉丝粘性 (互动)
-        score_hard = avg_score  # 收藏率指标 (原干货率)
-
-        # 调整顺序以匹配前端雷达图顺时针方向：
-        # 产出 -> 流量 -> 质量 -> 粘性 -> 收藏率
         stats = [
-            round(score_prod, 1),
-            round(score_pop, 1),
-            round(score_rep, 1),
-            round(score_inter, 1),
-            round(score_hard, 1)
+            normalize(video_count, prod_max),
+            normalize(total_views, pop_max),
+            normalize(coin_rate, coin_rate_max),
+            normalize(engagement_rate, engage_rate_max),
+            normalize(favorite_rate, fav_rate_max)
         ]
 
-        # --- 词云逻辑保持不变 ---
-        text = ""
-        for v in videos: text += v.title + (v.tags if v.tags else "")
+        # 真实词云：从数据库提取标题与标签
+        videos = Video.query.filter_by(up_name=up_name).all()
+        text = "".join([v.title + (v.tags or "") for v in videos])
 
         stop_words = {'的', '了', '在', '是', '我', '有', '和', '就', '不', '人', '都', '一', '一个', '上', '也', '很',
                       '到', '说', '去', '你', '会', '着', '没有', '看', '怎么', '视频', '高数', '数学', '考研',
@@ -259,16 +275,22 @@ def compare_data():
         word_counts = Counter(valid_words).most_common(60)
         word_cloud_data = [{'name': k, 'value': v} for k, v in word_counts]
 
-        return stats, word_cloud_data
+        metrics = {
+            'prod': {'value': video_count, 'unit': '个视频'},
+            'pop': {'value': total_views, 'unit': '次播放'},
+            'qual': {'value': coin_rate, 'unit': '%'},
+            'stick': {'value': engagement_rate, 'unit': '%'},
+            'hard': {'value': favorite_rate, 'unit': '%'}
+        }
 
-    stats1, words1 = get_up_data(up1)
-    stats2, words2 = get_up_data(up2)
+        return {'radar': stats, 'metrics': metrics, 'words': word_cloud_data}
+
+    data1 = get_up_data(up1)
+    data2 = get_up_data(up2)
 
     return jsonify({
-        'up1_stats': stats1,
-        'up2_stats': stats2,
-        'up1_words': words1,
-        'up2_words': words2
+        'up1': data1,
+        'up2': data2
     })
 
 @app.route('/api/recommend')
