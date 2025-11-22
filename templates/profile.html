@@ -1,0 +1,302 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <!-- 左侧：用户信息 -->
+    <div class="col-md-4">
+        <div class="card p-4 text-center h-100 shadow-sm border-0">
+            <div class="position-relative mx-auto mb-3" style="width: 120px; height: 120px;">
+                <img id="profile-avatar" src="" class="rounded-circle shadow-sm border border-3 border-white" style="width: 100%; height: 100%; object-fit: cover;">
+            </div>
+            <h4 class="fw-bold" id="user-name">加载中...</h4>
+            <p class="text-muted mb-3" id="user-desc">...</p>
+            <div class="d-grid gap-2">
+                <button class="btn btn-outline-primary rounded-pill" data-bs-toggle="modal" data-bs-target="#editProfileModal">
+                    <i class="fas fa-camera"></i> 编辑资料 & 头像
+                </button>
+            </div>
+        </div>
+    </div>
+    <!-- 右侧：数据统计 -->
+    <div class="col-md-8">
+        <div class="card p-4 h-100 shadow-sm border-0">
+            <h5 class="mb-4"><i class="fas fa-chart-line text-primary"></i> 学习计划进度</h5>
+            <div class="row text-center g-3 mb-4">
+                <div class="col-4">
+                    <div class="p-3 bg-light rounded-3">
+                        <h3 class="fw-bold text-danger mb-0" id="stat-fav-count">0</h3>
+                        <small class="text-muted">收藏视频</small>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="p-3 bg-light rounded-3">
+                        <h3 class="fw-bold text-primary mb-0" id="stat-todo-total">0</h3>
+                        <small class="text-muted">待办任务</small>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="p-3 bg-light rounded-3">
+                        <h3 class="fw-bold text-success mb-0" id="stat-todo-done">0</h3>
+                        <small class="text-muted">已完成</small>
+                    </div>
+                </div>
+            </div>
+            <div class="mb-2 d-flex justify-content-between fw-bold">
+                <span class="small text-muted">当前完成度</span>
+                <span id="progress-text" class="text-success small">0%</span>
+            </div>
+            <div class="progress" style="height: 15px; border-radius: 10px;">
+                <div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated bg-success" role="progressbar" style="width: 0%"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 选项卡导航 -->
+<ul class="nav nav-tabs mb-4" id="myTab" role="tablist">
+    <li class="nav-item">
+        <button class="nav-link active fw-bold" id="todo-tab" data-bs-toggle="tab" data-bs-target="#todo-pane">
+            <i class="fas fa-list-check text-primary"></i> 学习计划
+        </button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link fw-bold" id="fav-tab" data-bs-toggle="tab" data-bs-target="#fav-pane">
+            <i class="fas fa-heart text-danger"></i> 我的收藏
+        </button>
+    </li>
+    <!-- ✅ 新增历史选项卡 -->
+    <li class="nav-item">
+        <button class="nav-link fw-bold" id="history-tab" data-bs-toggle="tab" data-bs-target="#history-pane">
+            <i class="fas fa-history text-secondary"></i> 学习足迹
+        </button>
+    </li>
+</ul>
+
+<!-- 选项卡内容 -->
+<div class="tab-content" id="myTabContent">
+    <!-- 1. 待办 -->
+    <div class="tab-pane fade show active" id="todo-pane">
+        <div class="row g-4" id="todo-grid"></div>
+    </div>
+    <!-- 2. 收藏 -->
+    <div class="tab-pane fade" id="fav-pane">
+        <div class="row g-4" id="fav-grid"></div>
+    </div>
+    <!-- 3. 历史 (新增) -->
+    <div class="tab-pane fade" id="history-pane">
+        <div class="row g-4" id="history-grid"></div>
+    </div>
+</div>
+
+<!-- 编辑资料弹窗 -->
+<div class="modal fade" id="editProfileModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">修改个人信息</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editForm">
+                    <div class="mb-3 text-center">
+                        <label for="input-avatar" class="form-label d-block cursor-pointer">
+                            <div class="d-inline-block position-relative">
+                                <img id="preview-avatar" src="" class="rounded-circle shadow-sm" style="width: 80px; height: 80px; object-fit: cover;">
+                                <span class="position-absolute bottom-0 end-0 badge rounded-pill bg-secondary">修改</span>
+                            </div>
+                        </label>
+                        <input type="file" class="form-control d-none" id="input-avatar" accept="image/*" onchange="previewImage(this)">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">昵称</label>
+                        <input type="text" class="form-control" id="input-username">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">个性签名</label>
+                        <textarea class="form-control" id="input-desc" rows="2"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="saveProfile()">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function loadProfile() {
+        $.get('/api/user_profile', function(data) {
+            let info = data.user_info;
+            let stats = data.todo_stats;
+
+            $('#user-name').text(info.username);
+            $('#user-desc').text(info.description);
+            $('#profile-avatar').attr('src', info.avatar);
+            $('#preview-avatar').attr('src', info.avatar);
+            $('#input-username').val(info.username);
+            $('#input-desc').val(info.description);
+
+            $('#stat-fav-count').text(data.favorites.length);
+            $('#stat-todo-total').text(stats.total);
+            $('#stat-todo-done').text(stats.done);
+
+            let percent = stats.total > 0 ? Math.round(stats.done / stats.total * 100) : 0;
+            $('#progress-text').text(percent + '%');
+            $('#progress-bar').css('width', percent + '%').attr('aria-valuenow', percent);
+
+            renderTodoGrid(data.todos);
+            renderFavGrid(data.favorites);
+            renderHistoryGrid(data.history); // ✅ 渲染历史
+        });
+    }
+
+    function renderTodoGrid(list) {
+        let container = $('#todo-grid');
+        if (!list || list.length === 0) { container.html(emptyState('暂无待办任务')); return; }
+        let html = '';
+        list.forEach(v => {
+            let picUrl = v.pic || 'https://placehold.co/300x180/eee/999?text=No+Image';
+            let isDone = v.status === 1;
+            let cardClass = isDone ? 'border-success bg-light opacity-75' : '';
+            let btnClass = isDone ? 'btn-success' : 'btn-outline-secondary';
+            let btnText = isDone ? '已完成' : '标记完成';
+            html += `
+            <div class="col-md-3">
+                <div class="card h-100 shadow-sm hover-up ${cardClass}">
+                    <a href="${v.link}" target="_blank" class="position-relative" onclick="logHistory('${v.bvid}')">
+                        <img src="${picUrl}" class="card-img-top" style="height:120px; object-fit:cover;" referrerpolicy="no-referrer">
+                        ${isDone ? '<div class="position-absolute top-0 start-0 w-100 h-100 bg-white opacity-50 d-flex align-items-center justify-content-center"><i class="fas fa-check-circle text-success fa-3x"></i></div>' : ''}
+                    </a>
+                    <div class="card-body p-3">
+                        <h6 class="card-title text-truncate mb-2">${v.title}</h6>
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-sm ${btnClass}" onclick="toggleTodo('${v.bvid}')"><i class="fas ${isDone ? 'fa-check' : 'fa-square'}"></i> ${btnText}</button>
+                            <button class="btn btn-sm text-muted" onclick="removeAction('${v.bvid}', 'todo')">移除</button>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+        });
+        container.html(html);
+    }
+
+    function renderFavGrid(list) {
+        let container = $('#fav-grid');
+        if (!list || list.length === 0) { container.html(emptyState('暂无收藏')); return; }
+        let html = '';
+        list.forEach(v => {
+            let picUrl = v.pic || 'https://placehold.co/300x180/eee/999?text=No+Image';
+            html += `
+            <div class="col-md-3">
+                <div class="card h-100 shadow-sm hover-up">
+                    <a href="${v.link}" target="_blank" onclick="logHistory('${v.bvid}')">
+                        <img src="${picUrl}" class="card-img-top" style="height:120px; object-fit:cover;" referrerpolicy="no-referrer">
+                    </a>
+                    <div class="card-body p-3">
+                        <h6 class="card-title text-truncate">${v.title}</h6>
+                        <div class="mt-2 d-flex justify-content-between">
+                            <!-- ✅ 优化后的显示：硬核指数 -->
+                            <span class="badge bg-warning text-dark" data-bs-toggle="tooltip" title="硬核指数：基于收藏/播放比计算">🔥 ${v.score}</span>
+                            <button class="btn btn-sm btn-link text-danger p-0" onclick="removeAction('${v.bvid}', 'fav')">取消收藏</button>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+        });
+        container.html(html);
+    }
+
+    // ✅ 新增：渲染历史记录
+    function renderHistoryGrid(list) {
+        let container = $('#history-grid');
+        if (!list || list.length === 0) { container.html(emptyState('暂无观看记录')); return; }
+        let html = '';
+        list.forEach(v => {
+            let picUrl = v.pic || 'https://placehold.co/300x180/eee/999?text=No+Image';
+            html += `
+            <div class="col-md-3">
+                <div class="card h-100 shadow-sm border-0 hover-up">
+                    <a href="${v.link}" target="_blank" onclick="logHistory('${v.bvid}')">
+                        <img src="${picUrl}" class="card-img-top" style="height:120px; object-fit:cover; filter: grayscale(30%);" referrerpolicy="no-referrer">
+                    </a>
+                    <div class="card-body p-3">
+                        <h6 class="card-title text-truncate mb-1 text-muted">${v.title}</h6>
+                        <small class="text-secondary"><i class="fas fa-clock"></i> ${v.action_time}</small>
+                    </div>
+                </div>
+            </div>`;
+        });
+        container.html(html);
+    }
+
+    function emptyState(msg) {
+        return `<div class="col-12 text-center py-5 text-muted"><i class="far fa-folder-open fs-1 mb-2"></i><p>${msg}</p></div>`;
+    }
+
+    // 记录历史 (全局函数)
+    window.logHistory = function(bvid) {
+        $.ajax({
+            url: '/api/log_history',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({bvid: bvid}),
+            success: function() { console.log('History logged'); }
+        });
+    }
+
+    function toggleTodo(bvid) {
+        $.ajax({ url: '/api/toggle_todo', type: 'POST', contentType: 'application/json', data: JSON.stringify({bvid: bvid}), success: function() { loadProfile(); } });
+    }
+
+    function previewImage(input) {
+        if (input.files && input.files[0]) {
+            var reader = new FileReader();
+            reader.onload = function(e) { $('#preview-avatar').attr('src', e.target.result); }
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    function saveProfile() {
+        let formData = new FormData();
+        formData.append('username', $('#input-username').val());
+        formData.append('description', $('#input-desc').val());
+        let fileInput = $('#input-avatar')[0];
+        if (fileInput.files[0]) formData.append('avatar', fileInput.files[0]);
+
+        $.ajax({
+            url: '/api/update_profile', type: 'POST', data: formData, processData: false, contentType: false,
+            success: function() {
+                bootstrap.Modal.getInstance(document.getElementById('editProfileModal')).hide();
+                loadProfile();
+            }
+        });
+    }
+
+    function removeAction(bvid, type) {
+        if(!confirm("确定移除吗?")) return;
+        $.ajax({ url: '/api/remove_action', type: 'POST', contentType: 'application/json', data: JSON.stringify({bvid: bvid, type: type}), success: function() { loadProfile(); } });
+    }
+
+    $(document).ready(function() {
+        loadProfile();
+        // 激活 Tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        })
+    });
+</script>
+
+<style>
+    .hover-up { transition: transform 0.2s; }
+    .hover-up:hover { transform: translateY(-3px); }
+    .cursor-pointer { cursor: pointer; }
+    .nav-tabs .nav-link { color: #666; }
+    .nav-tabs .nav-link.active { color: var(--bili-pink); border-bottom: 2px solid var(--bili-pink); }
+</style>
+{% endblock %}

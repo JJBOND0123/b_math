@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数学课代表 - 高数资源分析</title>
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/all.min.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+
+    <script src="{{ url_for('static', filename='js/jquery.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/echarts.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+</head>
+<body>
+
+<div class="sidebar">
+    <div class="text-center mb-5 mt-3">
+        <h4 style="color: var(--bili-pink); font-weight: 900; letter-spacing: 1px;">
+            <i class="fab fa-bilibili"></i> 数学课代表
+        </h4>
+    </div>
+    <nav class="nav flex-column px-2">
+        <a class="nav-link {% if active=='dashboard' %}active{% endif %}" href="/">
+            <i class="fas fa-chart-pie fa-fw"></i> 数据仪表盘
+        </a>
+        <a class="nav-link {% if active=='resources' %}active{% endif %}" href="/resources">
+            <i class="fas fa-layer-group fa-fw"></i> 资源检索库
+        </a>
+        <a class="nav-link {% if active=='compare' %}active{% endif %}" href="/compare">
+            <i class="fas fa-user-friends fa-fw"></i> 学术解剖
+        </a>
+        <a class="nav-link {% if active=='recommend' %}active{% endif %}" href="/recommend">
+            <i class="fas fa-lightbulb fa-fw"></i> 上岸捷径
+        </a>
+        <a class="nav-link {% if active=='profile' %}active{% endif %}" href="/profile">
+            <i class="fas fa-user-graduate fa-fw"></i> 个人中心
+        </a>
+    </nav>
+</div>
+
+<div class="main-content">
+    <!-- Top Navbar (使用 Flexbox 实现三栏布局，搜索框居中) -->
+    <div class="d-flex justify-content-between align-items-center mb-4 bg-white px-4 py-3 rounded-4 shadow-sm sticky-top" style="z-index: 999;">
+
+        <!-- 左侧占位 (与右侧等宽，保证搜索框视觉居中) -->
+        <div style="width: 200px;">
+            <span class="text-muted small"><i class="fas fa-calendar-alt me-1"></i> 今日: <span id="current-date"></span></span>
+        </div>
+
+        <!-- 中间：全局搜索框 (完美居中) -->
+        <div class="flex-grow-1 d-flex justify-content-center">
+            <div class="input-group shadow-sm" style="max-width: 500px; width: 100%;">
+                <!-- ✅ 修改点：移除了放大镜图标 span，恢复了 input 的左边框 -->
+                <input type="text" id="global-search-input" class="form-control py-2 ps-4"
+                       placeholder="搜索 知识点 / UP主 / 题目..."
+                       style="box-shadow: none;"
+                       onkeypress="if(event.keyCode==13) doGlobalSearch()">
+                <button class="btn btn-primary px-4" onclick="doGlobalSearch()">搜索</button>
+            </div>
+        </div>
+
+        <!-- 右侧：用户菜单 -->
+        <div class="d-flex justify-content-end align-items-center" style="width: 200px;">
+            <div class="dropdown">
+                <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle text-dark" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    <div class="text-end me-2 d-none d-lg-block">
+                        <div class="fw-bold small">{{ current_user.username }}</div>
+                        <div class="text-muted" style="font-size: 10px;">{{ current_user.description[:10] }}</div>
+                    </div>
+                    {% if current_user.avatar %}
+                        <img src="{{ url_for('static', filename='avatars/' + current_user.avatar) }}" class="rounded-circle border shadow-sm" width="42" height="42" style="object-fit: cover;">
+                    {% else %}
+                        <img src="https://placehold.co/40x40/00A1D6/FFFFFF?text={{ current_user.username[0]|upper }}" class="rounded-circle shadow-sm" width="42" height="42">
+                    {% endif %}
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3 mt-2" aria-labelledby="userDropdown">
+                    <li><a class="dropdown-item py-2" href="/profile"><i class="fas fa-user me-2 text-primary"></i> 个人中心</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item py-2 text-danger" href="/logout"><i class="fas fa-sign-out-alt me-2"></i> 退出登录</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    {% block content %}{% endblock %}
+</div>
+
+<script>
+function doGlobalSearch() {
+    var keyword = document.getElementById('global-search-input').value;
+    if(keyword.trim()) {
+        window.location.href = "/resources?q=" + encodeURIComponent(keyword);
+    }
+}
+// 显示日期
+document.getElementById('current-date').innerText = new Date().toLocaleDateString();
+</script>
+
+{% block scripts %}{% endblock %}
+</body>
+</html>

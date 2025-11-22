@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mb-4">
+    <!-- 页面标题 -->
+    <div class="d-flex align-items-center mb-3">
+        <h3 class="text-secondary mb-0"><i class="fas fa-lightbulb text-warning"></i> 智能辅助推荐</h3>
+    </div>
+    <p class="text-muted">不知道看什么？选择你的当前场景：</p>
+
+    <!-- 场景选择按钮 -->
+    <div class="row text-center g-3">
+        <div class="col-md-4">
+            <div class="card p-4 hover-shadow cursor-pointer border-0 shadow-sm" onclick="loadRec('exam')" style="border-bottom: 5px solid #FB7299 !important;">
+                <h4 class="fw-bold"><i class="fas fa-fire text-danger"></i> 期末突击</h4>
+                <small class="text-muted">短平快 · 播放高</small>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card p-4 hover-shadow cursor-pointer border-0 shadow-sm" onclick="loadRec('basic')" style="border-bottom: 5px solid #00A1D6 !important;">
+                <h4 class="fw-bold"><i class="fas fa-books text-primary"></i> 考研基础</h4>
+                <small class="text-muted">系统长课 · 干货多</small>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card p-4 hover-shadow cursor-pointer border-0 shadow-sm" onclick="loadRec('exercise')" style="border-bottom: 5px solid #F0B90B !important;">
+                <h4 class="fw-bold"><i class="fas fa-pen-nib text-warning"></i> 习题冲刺</h4>
+                <small class="text-muted">刷题讲解 · 技巧强</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 推荐结果标题 -->
+<h5 class="mb-3 fw-bold" id="rec-title"><i class="fas fa-sparkles text-warning"></i> 猜你喜欢 (基于您的浏览习惯)</h5>
+
+<!-- 视频列表容器 -->
+<div class="row g-4" id="rec-grid">
+    <!-- 加载动画 -->
+    <div class="col-12 text-center py-5">
+        <div class="spinner-border text-primary" role="status"></div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// 定义加载函数
+function loadRec(scene) {
+    // 更改标题
+    var titles = {
+        'exam': '🔥 期末突击推荐',
+        'basic': '📚 考研基础推荐',
+        'exercise': '✍️ 习题冲刺推荐',
+        'guess': '✨ 猜你喜欢'
+    };
+    $('#rec-title').text(titles[scene] || titles['guess']);
+
+    // 显示加载动画
+    $('#rec-grid').html('<div class="col-12 text-center py-5"><div class="spinner-border text-secondary" role="status"></div><p class="mt-2 text-muted">正在智能分析中...</p></div>');
+
+    // 请求数据
+    $.get('/api/recommend', {scene: scene}, function(data) {
+        var html = '';
+
+        if (!data || data.length === 0) {
+            $('#rec-grid').html('<div class="text-center p-5 text-muted">暂无推荐数据</div>');
+            return;
+        }
+
+        data.forEach(function(v) {
+            // 图片容错
+            let picUrl = v.pic || 'https://placehold.co/300x180/eee/999?text=No+Image';
+
+            html += `
+            <div class="col-md-3">
+                <div class="card h-100 shadow-sm border-0 hover-up">
+                    <!-- ✅ 关键修复：添加 referrerpolicy="no-referrer" 破解防盗链 -->
+                    <a href="${v.link}" target="_blank">
+                        <img src="${picUrl}" class="card-img-top"
+                             style="height:150px; object-fit:cover;"
+                             referrerpolicy="no-referrer"
+                             onerror="this.src='https://placehold.co/300x180/eee/999?text=Image+Error'">
+                    </a>
+
+                    <div class="card-body d-flex flex-column p-3">
+                        <h6 class="card-title text-truncate mb-2" title="${v.title}">
+                            <a href="${v.link}" target="_blank" class="text-dark text-decoration-none fw-bold">${v.title}</a>
+                        </h6>
+                        <div class="small text-muted mb-3">
+                            UP主: ${v.up}
+                        </div>
+
+                        <div class="mt-auto d-flex justify-content-between gap-2">
+                             <button class="btn btn-sm btn-outline-danger flex-grow-1" onclick="doAction('${v.bvid}', 'fav', this)">
+                                <i class="far fa-heart"></i> 收藏
+                             </button>
+                             <button class="btn btn-sm btn-outline-primary flex-grow-1" onclick="doAction('${v.bvid}', 'todo', this)">
+                                <i class="fas fa-plus"></i> 待办
+                             </button>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+        });
+        $('#rec-grid').html(html);
+    });
+}
+
+// 收藏/待办 操作函数
+function doAction(bvid, type, btn) {
+    // 防止重复点击
+    $(btn).prop('disabled', true);
+
+    $.ajax({
+        url: '/api/action',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({bvid: bvid, type: type}),
+        success: function(res) {
+            // 简单的反馈动画
+            let originalText = $(btn).html();
+            $(btn).html('<i class="fas fa-check"></i> 已添加').removeClass('btn-outline-danger btn-outline-primary').addClass('btn-success');
+
+            setTimeout(() => {
+                $(btn).html(originalText).prop('disabled', false);
+                // 恢复样式
+                if(type === 'fav') $(btn).addClass('btn-outline-danger').removeClass('btn-success');
+                else $(btn).addClass('btn-outline-primary').removeClass('btn-success');
+            }, 1500);
+        },
+        error: function() {
+            alert("操作失败，请检查网络");
+            $(btn).prop('disabled', false);
+        }
+    });
+}
+
+// 页面加载完成后默认加载“猜你喜欢”
+$(document).ready(function() {
+    loadRec('guess');
+});
+</script>
+
+<!-- 鼠标悬停效果 -->
+<style>
+    .cursor-pointer { cursor: pointer; }
+    .hover-shadow { transition: all 0.3s; }
+    .hover-shadow:hover { transform: translateY(-3px); box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important; }
+    .hover-up { transition: transform 0.2s; }
+    .hover-up:hover { transform: translateY(-5px); }
+</style>
+{% endblock %}

@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- 头部 -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold text-dark mb-1" style="letter-spacing: 1px;">
+            <i class="fas fa-chart-network text-primary"></i> 数海罗盘
+        </h4>
+        <p class="text-muted small mb-0">基于 {{ current_user.username }} 的个性化数据大屏</p>
+    </div>
+    <div class="text-end bg-white px-3 py-2 rounded-pill shadow-sm">
+        <span class="h5 fw-bold text-dark mb-0 font-monospace" id="clock">00:00:00</span>
+    </div>
+</div>
+
+<!-- 第一层：核心指标 -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100 card-gradient-blue hover-up p-3">
+            <div class="d-flex justify-content-between align-items-center text-white">
+                <div><div class="opacity-75 small text-uppercase fw-bold">资源总数</div><div class="display-6 fw-bold" id="val-videos">-</div></div>
+                <i class="fas fa-database fa-3x opacity-25"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100 card-gradient-orange hover-up p-3">
+            <div class="d-flex justify-content-between align-items-center text-white">
+                <div><div class="opacity-75 small text-uppercase fw-bold">累计热度</div><div class="display-6 fw-bold" id="val-views">-</div></div>
+                <i class="fas fa-fire fa-3x opacity-25"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100 card-gradient-pink hover-up p-3">
+            <div class="d-flex justify-content-between align-items-center text-white">
+                <div><div class="opacity-75 small text-uppercase fw-bold">平均含金量</div><div class="display-6 fw-bold" id="val-score">-</div></div>
+                <i class="fas fa-star fa-3x opacity-25"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100 card-gradient-green hover-up p-3">
+            <div class="d-flex justify-content-between align-items-center text-white">
+                <div><div class="opacity-75 small text-uppercase fw-bold">入驻名师</div><div class="display-6 fw-bold" id="val-teachers">-</div></div>
+                <i class="fas fa-user-graduate fa-3x opacity-25"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 第二层：榜单与分布 -->
+<div class="row g-3 mb-4">
+    <!-- 左侧：干货排行榜 -->
+    <div class="col-md-8">
+        <div class="card border-0 shadow-sm h-100 rounded-4">
+            <div class="card-header bg-transparent border-0 pt-4 ps-4">
+                <h6 class="fw-bold text-dark"><i class="fas fa-crown text-warning me-2"></i>全站视频“含金量” Top 8 <small class="text-muted ms-2 fw-normal" style="font-size: 0.8rem;">(点击跳转)</small></h6>
+            </div>
+            <div class="card-body">
+                <div id="rankChart" style="height: 350px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ✅ 右侧：学科资源分布 (改为玫瑰图) -->
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100 rounded-4">
+            <div class="card-header bg-transparent border-0 pt-4 ps-4">
+                <h6 class="fw-bold text-dark"><i class="fas fa-chart-pie text-success me-2"></i>学科资源占比</h6>
+            </div>
+            <div class="card-body">
+                <!-- ID 改为 roseChart -->
+                <div id="roseChart" style="height: 350px;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 第三层：性价比分析 -->
+<div class="row g-3">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm h-100 rounded-4">
+            <div class="card-header bg-transparent border-0 pt-4 ps-4 d-flex align-items-center">
+                <h6 class="fw-bold text-dark mb-0"><i class="fas fa-search-dollar text-primary me-2"></i>视频性价比分析</h6>
+                <span class="badge bg-light text-secondary ms-2 border">点击圆点可直接跳转观看</span>
+            </div>
+            <div class="card-body">
+                <div id="scatterChart" style="height: 450px;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleTimeString(); }, 1000);
+    function formatCount(num) {
+        if (num > 100000000) return (num / 100000000).toFixed(2) + '亿';
+        if (num > 10000) return (num / 10000).toFixed(1) + '万';
+        return num ? num.toLocaleString() : '0';
+    }
+
+    $(document).ready(function() {
+        $.get('/api/stats', function(res) {
+            $('#val-videos').text(res.total_videos.toLocaleString());
+            $('#val-views').text(formatCount(res.total_views));
+            $('#val-teachers').text(res.total_teachers);
+            $('#val-score').text(res.avg_score);
+
+            initRankChart(res.rank_titles, res.rank_scores, res.rank_bvids);
+
+            // ✅ 初始化玫瑰图
+            initRoseChart(res.category_data);
+
+            initScatterChart(res.scatter_data);
+        });
+    });
+
+    // 1. 干货榜
+    function initRankChart(titles, scores, bvids) {
+        var chart = echarts.init(document.getElementById('rankChart'));
+        chart.setOption({
+            tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, formatter: '{b}: 干货值 {c}' },
+            grid: { left: '3%', right: '8%', bottom: '3%', top: '3%', containLabel: true },
+            xAxis: { type: 'value', splitLine: { show: false } },
+            yAxis: {
+                type: 'category', data: titles, triggerEvent: true,
+                axisLabel: { interval: 0, fontWeight: 'bold', color: '#333', width: 120, overflow: 'truncate' },
+                axisLine: { show: false }, axisTick: { show: false }
+            },
+            series: [{
+                name: '含金量', type: 'bar', data: scores, barWidth: '50%',
+                itemStyle: { borderRadius: [0, 10, 10, 0], color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#00A1D6' }, { offset: 1, color: '#00F2FE' }]) },
+                label: { show: true, position: 'right', fontWeight: 'bold', color: '#666' }
+            }]
+        });
+        chart.on('click', function(params) {
+            var bvid = null;
+            if (params.componentType === 'series') bvid = bvids[params.dataIndex];
+            else if (params.componentType === 'yAxis') {
+                var index = titles.indexOf(params.value);
+                if (index !== -1) bvid = bvids[index];
+            }
+            if (bvid) window.open('https://www.bilibili.com/video/' + bvid, '_blank');
+        });
+        window.addEventListener('resize', () => chart.resize());
+    }
+
+    // ✅ 2. 学科资源分布 (南丁格尔玫瑰图)
+    function initRoseChart(data) {
+        var chart = echarts.init(document.getElementById('roseChart'));
+        chart.setOption({
+            tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+            legend: { top: 'bottom', icon: 'circle', type: 'scroll' },
+            series: [{
+                name: '资源分布',
+                type: 'pie',
+                radius: [20, 100], // 内圆和外圆半径
+                center: ['50%', '45%'],
+                roseType: 'area', // 面积模式：数值越大，半径越大
+                itemStyle: {
+                    borderRadius: 5
+                },
+                data: data,
+                // B站风格+糖果色
+                color: ['#00A1D6', '#FB7299', '#FFC107', '#33CC99', '#975FE4', '#FF6699', '#23ADE5']
+            }]
+        });
+        window.addEventListener('resize', () => chart.resize());
+    }
+
+    // 3. 性价比散点图
+    function initScatterChart(data) {
+        var chart = echarts.init(document.getElementById('scatterChart'));
+        chart.setOption({
+            tooltip: {
+                trigger: 'item',
+                backgroundColor: 'rgba(255,255,255,0.95)',
+                textStyle: { color: '#333' },
+                formatter: function(params) {
+                    return `<div style="text-align:left">
+                            <span style="font-weight:bold; color:#00A1D6">${params.data[3]}</span><br/>
+                            ${params.data[2]}<br/>
+                            ⏱️ 时长: <b>${params.data[0]}</b> 分<br/>
+                            🔥 含金量: <b>${params.data[1]}</b>
+                            </div>`;
+                }
+            },
+            grid: { left: '5%', right: '5%', bottom: '10%', top: '10%' },
+            xAxis: { name: '时长(分)', type: 'value', splitLine: { lineStyle: { type: 'dashed' } } },
+            yAxis: { name: '含金量', type: 'value', splitLine: { lineStyle: { type: 'dashed' } } },
+            series: [{
+                symbolSize: 10,
+                data: data,
+                type: 'scatter',
+                cursor: 'pointer',
+                itemStyle: {
+                    color: function(params) {
+                        return params.data[1] > 30 ? '#FB7299' : (params.data[1] > 10 ? '#00A1D6' : '#aaa');
+                    },
+                    opacity: 0.7,
+                    shadowBlur: 5,
+                    shadowColor: 'rgba(0,0,0,0.2)'
+                }
+            }]
+        });
+        chart.on('click', function(params) {
+            var bvid = params.data[4];
+            if (bvid) window.open('https://www.bilibili.com/video/' + bvid, '_blank');
+        });
+        window.addEventListener('resize', () => chart.resize());
+    }
+</script>
+
+<style>
+    .card-gradient-blue { background: linear-gradient(120deg, #00a1d6 0%, #4facfe 100%); }
+    .card-gradient-pink { background: linear-gradient(120deg, #fb7299 0%, #ff9a9e 100%); }
+    .card-gradient-orange { background: linear-gradient(120deg, #ff9a44 0%, #fc6076 100%); }
+    .card-gradient-green { background: linear-gradient(120deg, #00b09b 0%, #96c93d 100%); }
+    .hover-up { transition: transform 0.2s; }
+    .hover-up:hover { transform: translateY(-5px); }
+    .display-6 { font-size: 2rem; letter-spacing: -1px; }
+</style>
+{% endblock %}

@@ -1,0 +1,88 @@
+/* static/css/style.css */
+:root {
+    --bili-pink: #FB7299;
+    --tech-blue: #00A1D6;
+    --bg-gray: #f4f5f7;
+}
+
+body {
+    background-color: var(--bg-gray);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Sidebar & Navbar */
+.sidebar {
+    height: 100vh;
+    position: fixed;
+    top: 0; left: 0;
+    width: 240px;
+    background: #fff;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.05);
+    z-index: 1000;
+    padding-top: 20px;
+}
+
+.main-content {
+    margin-left: 240px;
+    padding: 30px;
+}
+
+.nav-link {
+    color: #666;
+    padding: 15px 25px;
+    font-size: 16px;
+    transition: all 0.3s;
+    border-radius: 0 25px 25px 0;
+    margin-bottom: 5px;
+}
+
+.nav-link:hover, .nav-link.active {
+    background-color: var(--bili-pink);
+    color: white;
+}
+
+.nav-link i { width: 30px; text-align: center; }
+
+/* Cards */
+.card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+    transition: transform 0.2s;
+}
+.card:hover { transform: translateY(-3px); }
+
+/* Custom Buttons */
+.btn-pink {
+    background-color: var(--bili-pink);
+    color: white;
+}
+.btn-outline-pink {
+    border-color: var(--bili-pink);
+    color: var(--bili-pink);
+}
+.btn-outline-pink:hover, .btn-pink:hover {
+    background-color: #e65b80;
+    color: white;
+}
+/* 按钮悬停放大效果 */
+.hover-scale {
+    transition: transform 0.2s ease;
+}
+.hover-scale:hover {
+    transform: scale(1.05);
+}
+
+/* 卡片阴影柔化 */
+.shadow-sm {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.05) !important;
+}
+.shadow-lg {
+    box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.15) !important;
+}
+
+/* 选中框去掉默认边框，增加质感 */
+.form-select:focus {
+    box-shadow: none;
+    border-color: transparent;
+}
