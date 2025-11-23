@@ -15,7 +15,7 @@ class Video(db.Model):
     # 主键使用 bvid，方便前后端直链跳转。
     bvid = db.Column(db.String(20), primary_key=True)
     title = db.Column(db.String(255))
-    up_name = db.Column(db.String(100))
+    up_name = db.Column(db.String(100), index=True)
     up_mid = db.Column(db.BigInteger)       # UP 主 uid，可拼个人空间链接
     up_face = db.Column(db.String(500))     # 头像链接，前端展示用
     pic_url = db.Column(db.String(500))     # 封面图
@@ -29,12 +29,12 @@ class Video(db.Model):
     share_count = db.Column(db.Integer)
 
     duration = db.Column(db.Integer)        # 视频时长（秒）
-    pubdate = db.Column(db.DateTime)        # 发布时间
+    pubdate = db.Column(db.DateTime, index=True)        # 发布时间
     tags = db.Column(db.String(500))        # 搜索关键词或标签
 
     category = db.Column(db.String(50))     # 旧版分类字段，保留兼容历史数据
-    phase = db.Column(db.String(50))        # 一级分类：阶段（如：校内同步、升学备考）
-    subject = db.Column(db.String(50))      # 二级分类：科目/主题（如：高等数学、线性代数）
+    phase = db.Column(db.String(50), index=True)        # 一级分类：阶段（如：校内同步、升学备考）
+    subject = db.Column(db.String(50), index=True)      # 二级分类：科目/主题（如：高等数学、线性代数）
 
     dry_goods_ratio = db.Column(db.Float)   # 干货度指标：收藏/播放*1000 的估算值
 
@@ -44,7 +44,7 @@ class User(UserMixin, db.Model):
 
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(50))
+    username = db.Column(db.String(50), unique=True, index=True)
     password = db.Column(db.String(255))
     description = db.Column(db.String(255))
     avatar = db.Column(db.String(200))
@@ -60,3 +60,7 @@ class UserAction(db.Model):
     action_type = db.Column(db.String(20))  # fav / todo / history
     status = db.Column(db.Integer, default=0)       # todo 的完成状态；其他类型保持 0
     create_time = db.Column(db.DateTime, default=func.now())
+
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'bvid', 'action_type', name='uq_user_action'),
+    )

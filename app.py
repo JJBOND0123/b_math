@@ -6,6 +6,8 @@ import jieba
 import math
 from collections import Counter
 import re
+from io import BytesIO
+from PIL import Image
 from flask import Flask, render_template, jsonify, request, redirect, url_for, flash
 from werkzeug.utils import secure_filename
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -13,6 +15,7 @@ from flask_login import LoginManager, login_user, login_required, logout_user, c
 from config import Config
 from models import db, Video, User, UserAction
 from sqlalchemy import func, or_
+from sqlalchemy.exc import IntegrityError
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -157,16 +160,20 @@ def register():
         elif username_exists(username):
             flash('用户名已存在', 'danger')
         else:
-            new_user = User(
-                username=username,
-                password=hash_password(password),
-                description='这个人很懒，还没有填写个人介绍',
-                avatar=''
-            )
-            db.session.add(new_user)
-            db.session.commit()
-            flash('注册成功，请登录', 'success')
-            return redirect(url_for('login'))
+            try:
+                new_user = User(
+                    username=username,
+                    password=hash_password(password),
+                    description='这个人很懒，还没有填写个人介绍',
+                    avatar=''
+                )
+                db.session.add(new_user)
+                db.session.commit()
+                flash('注册成功，请登录', 'success')
+                return redirect(url_for('login'))
+            except IntegrityError:
+                db.session.rollback()
+                flash('用户名已存在', 'danger')
     return render_template('register.html')
 
 
@@ -582,7 +589,7 @@ def log_history():
 @app.route('/api/update_profile', methods=['POST'])
 @login_required
 def update_user_profile():
-    """更新用户名/签名/头像，包含文件大小与类型校验。"""
+    """更新用户名/签名/头像，包含文件大小、类型及图像重采样校验。"""
     user = current_user
     username = request.form.get('username')
     description = request.form.get('description')
@@ -604,10 +611,17 @@ def update_user_profile():
             file.stream.seek(0)
             if size > MAX_AVATAR_SIZE:
                 return jsonify({'msg': '头像文件过大', 'code': 400}), 400
-            safe_name = secure_filename(file.filename)
-            ext = safe_name.rsplit('.', 1)[1].lower()
-            filename = f"user_{user.id}_{int(time.time())}.{ext}"
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            try:
+                img = Image.open(file.stream).convert('RGB')
+            except Exception:
+                return jsonify({'msg': '无效的图片文件', 'code': 400}), 400
+            img.thumbnail((256, 256))
+            buffer = BytesIO()
+            img.save(buffer, format='JPEG', quality=85)
+            buffer.seek(0)
+            filename = f"user_{user.id}_{int(time.time())}.jpg"
+            with open(os.path.join(app.config['UPLOAD_FOLDER'], filename), 'wb') as out:
+                out.write(buffer.read())
             user.avatar = filename
     db.session.commit()
     return jsonify({'msg': '更新成功', 'code': 200})
