@@ -1,8 +1,11 @@
+# Runtime
 Flask==3.1.2
 Flask-Login==0.6.3
-flask_sqlalchemy==3.1.1
-jieba==0.42.1
-pymysql==1.1.2
-Requests==2.32.5
+Flask-SQLAlchemy==3.1.1
 SQLAlchemy==2.0.44
+PyMySQL==1.1.2
+requests==2.32.5
+jieba==0.42.1
+
+# Dev/Test
 pytest==8.3.3

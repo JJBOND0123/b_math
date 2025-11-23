@@ -56,7 +56,7 @@
                        placeholder="搜索 知识点 / UP主 / 题目..."
                        style="box-shadow: none;"
                        onkeypress="if(event.keyCode==13) doGlobalSearch()">
-                <button class="btn btn-primary px-4" onclick="doGlobalSearch()">搜索</button>
+                <button class="btn btn-bili btn-search px-4" onclick="doGlobalSearch()">搜索</button>
             </div>
         </div>
 
@@ -97,6 +97,7 @@ function doGlobalSearch() {
 document.getElementById('current-date').innerText = new Date().toLocaleDateString();
 </script>
 
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

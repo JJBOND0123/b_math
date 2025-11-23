@@ -3,6 +3,10 @@
     --bili-pink: #FB7299;
     --tech-blue: #00A1D6;
     --bg-gray: #f4f5f7;
+    --bili-text: #18191C;
+    --bili-gray: #9499A0;
+    --bili-border: #E3E5E7;
+    --bili-bg: #F6F7F8;
 }
 
 body {
@@ -10,93 +14,123 @@ body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-.topbar-date {
-    font-size: 0.95rem;
-    font-weight: 600;
-}
-
-.topbar-username {
-    font-size: 1rem;
-    letter-spacing: 0.5px;
-}
-
-.topbar-signature {
-    font-size: 0.85rem;
-}
+/* --- 通用布局 --- */
+.topbar-date { font-size: 0.95rem; font-weight: 600; }
+.topbar-username { font-size: 1rem; letter-spacing: 0.5px; }
+.topbar-signature { font-size: 0.85rem; }
 
 /* Sidebar & Navbar */
 .sidebar {
-    height: 100vh;
-    position: fixed;
-    top: 0; left: 0;
-    width: 240px;
-    background: #fff;
-    box-shadow: 2px 0 10px rgba(0,0,0,0.05);
-    z-index: 1000;
-    padding-top: 20px;
+    height: 100vh; position: fixed; top: 0; left: 0; width: 240px;
+    background: #fff; box-shadow: 2px 0 10px rgba(0,0,0,0.05);
+    z-index: 1000; padding-top: 20px;
 }
-
-.main-content {
-    margin-left: 240px;
-    padding: 30px;
-}
-
+.main-content { margin-left: 240px; padding: 30px; }
 .nav-link {
-    color: #666;
-    padding: 15px 25px;
-    font-size: 16px;
-    transition: all 0.3s;
-    border-radius: 0 25px 25px 0;
-    margin-bottom: 5px;
+    color: #666; padding: 15px 25px; font-size: 16px; transition: all 0.3s;
+    border-radius: 0 25px 25px 0; margin-bottom: 5px;
 }
-
-.nav-link:hover, .nav-link.active {
-    background-color: var(--bili-pink);
-    color: white;
-}
-
+.nav-link:hover, .nav-link.active { background-color: var(--bili-pink); color: white; }
 .nav-link i { width: 30px; text-align: center; }
 
-/* Cards */
-.card {
-    border: none;
-    border-radius: 12px;
+/* --- B站通用面板 (Cards) --- */
+.bili-panel {
+    background: #fff; border: 1px solid var(--bili-border); border-radius: 6px;
+    padding: 16px 20px; margin-bottom: 16px;
+    height: 100%; display: flex; flex-direction: column; overflow: hidden;
     box-shadow: 0 4px 12px rgba(0,0,0,0.03);
-    transition: transform 0.2s;
-}
-.card:hover { transform: translateY(-3px); }
-
-/* Custom Buttons */
-.btn-pink {
-    background-color: var(--bili-pink);
-    color: white;
-}
-.btn-outline-pink {
-    border-color: var(--bili-pink);
-    color: var(--bili-pink);
-}
-.btn-outline-pink:hover, .btn-pink:hover {
-    background-color: #e65b80;
-    color: white;
-}
-/* 按钮悬停放大效果 */
-.hover-scale {
-    transition: transform 0.2s ease;
-}
-.hover-scale:hover {
-    transform: scale(1.05);
 }
 
-/* 卡片阴影柔化 */
-.shadow-sm {
-    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.05) !important;
+.panel-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 15px; padding-bottom: 8px; border-bottom: 1px solid #f0f0f0;
+    flex-shrink: 0;
 }
-.shadow-lg {
-    box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.15) !important;
+.panel-title {
+    font-size: 16px; font-weight: 600; color: var(--bili-text);
+    display: flex; align-items: center; gap: 8px;
 }
+.panel-title::before {
+    content: ''; display: block; width: 4px; height: 16px;
+    background: var(--tech-blue); border-radius: 2px;
+}
+.panel-subtitle { font-size: 12px; color: var(--bili-gray); font-weight: normal; }
 
-/* 选中框去掉默认边框，增加质感 */
-.form-select:focus {
-    box-shadow: none;
-    border-color: transparent;
+/* --- 学术解剖页专用样式 (Compare Page) --- */
+
+/* 1. 顶部 PK 控制台 */
+.pk-console {
+    display: flex; flex-direction: row !important;
+    align-items: center; justify-content: space-between;
+    padding: 20px 30px;
+    overflow: visible !important; /* 允许下拉框超出边界显示 */
+    z-index: 999; /* 确保层级比下面的图表高，不被遮挡 */
 }
+.fighter-zone { flex: 1; display: flex; flex-direction: column; align-items: center; }
+.zone-label { font-size: 12px; color: var(--bili-gray); margin-bottom: 6px; letter-spacing: 1px; font-weight: 600; }
+
+/* 自定义下拉框 */
+.bili-select-wrapper { position: relative; width: 100%; max-width: 360px; }
+.bili-select-trigger {
+    background: var(--bili-bg); border: 1px solid transparent; border-radius: 6px; height: 44px;
+    display: flex; align-items: center; justify-content: space-between; padding: 0 16px;
+    cursor: pointer; transition: all 0.2s;
+}
+.bili-select-trigger span { font-size: 16px; font-weight: 600; color: var(--bili-text); }
+.bili-select-trigger i { color: var(--bili-gray); transition: transform 0.2s; }
+.bili-select-trigger:hover { background: #fff; border-color: var(--bili-border); }
+.active .bili-select-trigger { background: #fff; border-color: var(--tech-blue); box-shadow: 0 0 0 2px rgba(0, 174, 236, 0.1); }
+.active .bili-select-trigger i { transform: rotate(180deg); }
+
+.bili-options {
+    position: absolute; top: 110%; left: 0; width: 100%; background: #fff; border: 1px solid var(--bili-border);
+    border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-height: 300px; overflow-y: auto;
+    display: none; z-index: 100; padding: 6px 0;
+}
+.active .bili-options { display: block; }
+.bili-option { padding: 10px 16px; font-size: 14px; color: var(--bili-text); cursor: pointer; }
+.bili-option:hover { background: var(--bili-bg); color: var(--tech-blue); }
+.zone-blue .active .bili-select-trigger { border-color: var(--tech-blue); }
+.zone-pink .active .bili-select-trigger { border-color: var(--bili-pink); }
+
+/* VS 中轴 */
+.vs-axis { width: 100px; text-align: center; }
+.vs-text {
+    font-family: 'Impact', sans-serif; font-size: 42px; font-style: italic;
+    background: linear-gradient(90deg, var(--tech-blue) 40%, var(--bili-pink) 60%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    line-height: 1; margin-bottom: 8px;
+}
+.btn-start {
+    background: var(--bili-text); color: #fff; border: none; padding: 6px 20px; border-radius: 20px;
+    font-size: 13px; font-weight: 600; cursor: pointer; transition: 0.2s;
+}
+.btn-start:hover { transform: scale(1.05); box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
+
+/* 数据表格 */
+.data-table { width: 100%; border-collapse: collapse; }
+.data-row { border-bottom: 1px solid #f7f7f7; transition: background 0.2s; }
+.data-row:hover { background: #fafafa; }
+.data-cell { padding: 10px 8px; font-size: 14px; }
+.cell-label { color: var(--bili-gray); font-weight: 500; width: 30%; }
+.cell-val-blue { color: var(--tech-blue); font-weight: 700; font-size: 15px; width: 35%; text-align: center; }
+.cell-val-pink { color: var(--bili-pink); font-weight: 700; font-size: 15px; width: 35%; text-align: center; }
+
+/* 动画 */
+.chart-init-hidden { opacity: 0; }
+@keyframes flowerBloom {
+    0% { transform: scale(0.1); opacity: 0; }
+    60% { transform: scale(1.05); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+}
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.animate-flower { animation: flowerBloom 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; transform-origin: center center; }
+.animate-fade { animation: fadeInUp 0.8s ease-out forwards; }
+
+/* Bootstrap 辅助类重写 */
+.btn-bili { background-color: var(--bili-pink); border-color: var(--bili-pink); color: white; }
+.btn-bili:hover { background-color: #E04B81; color: white; }
+.btn-search:hover { color: #ffffff !important; }

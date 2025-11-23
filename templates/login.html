@@ -1,47 +1,150 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>登录 - 数学课代表</title>
-    <!-- 使用本地 CSS -->
-    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { background: #f4f5f7; display: flex; align-items: center; justify-content: center; height: 100vh; }
-        .login-card { width: 400px; padding: 40px; background: #fff; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
-        .btn-pink { background: #FB7299; color: #fff; border: none; }
-        .btn-pink:hover { background: #ff85ad; color: #fff; }
+        :root {
+            --bili-pink: #FB7299;
+            --bili-blue: #00AEEC;
+            --bili-gray: #999;
+            --bg-color: #F6F7F8;
+        }
+        body {
+            background: url('https://s1.hdslb.com/bfs/static/jinkela/long/images/login_bg.png') no-repeat center center fixed;
+            background-size: cover;
+            background-color: var(--bg-color);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+        }
+        .auth-card {
+            display: flex;
+            width: 820px;
+            height: 500px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 16px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+        .auth-sidebar {
+            flex: 1;
+            background: linear-gradient(135deg, var(--bili-pink) 0%, #FF8EB3 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            padding: 40px;
+            position: relative;
+            overflow: hidden;
+        }
+        .auth-sidebar::before {
+            content: '';
+            position: absolute;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 60%);
+            top: -50%;
+            left: -50%;
+        }
+        .brand-icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+            animation: float 3s ease-in-out infinite;
+        }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        .auth-form-box {
+            flex: 1.2;
+            padding: 50px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .form-title { font-size: 24px; font-weight: bold; color: #333; margin-bottom: 30px; text-align: center; }
+        .input-group-custom { position: relative; margin-bottom: 24px; }
+        .input-icon {
+            position: absolute;
+            top: 50%;
+            left: 15px;
+            transform: translateY(-50%);
+            color: #ccc;
+            transition: 0.3s;
+            z-index: 2;
+        }
+        .form-control-custom {
+            width: 100%;
+            padding: 12px 15px 12px 45px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s;
+            background: #f9f9f9;
+        }
+        .form-control-custom:focus {
+            background: #fff;
+            border-color: var(--bili-pink);
+            box-shadow: 0 0 0 4px rgba(251, 114, 153, 0.1);
+            outline: none;
+        }
+        .input-group-custom:focus-within .input-icon { color: var(--bili-pink); }
+        .btn-bili {
+            width: 100%;
+            padding: 12px;
+            background: var(--bili-pink);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 10px rgba(251, 114, 153, 0.3);
+        }
+        .btn-bili:hover {
+            background: #ff85ad;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(251, 114, 153, 0.4);
+        }
+        .auth-footer { text-align: center; margin-top: 20px; font-size: 13px; color: #666; }
+        .auth-link { color: var(--bili-blue); text-decoration: none; font-weight: 500; transition: 0.2s; }
+        .auth-link:hover { text-decoration: underline; }
+        @media (max-width: 768px) {
+            .auth-card { width: 90%; height: auto; flex-direction: column; }
+            .auth-sidebar { display: none; }
+            .auth-form-box { padding: 40px 30px; }
+        }
     </style>
 </head>
 <body>
-    <div class="login-card">
-        <h3 class="text-center mb-4 fw-bold" style="color: #FB7299;">欢迎回来</h3>
-
-        <!-- ✅ 修改部分：支持显示不同颜色的消息 (绿色成功/红色失败) -->
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <!-- 如果没有 category，默认用 danger (红色) -->
-                    <div class="alert alert-{{ category if category != 'message' else 'danger' }} text-center">
-                        {{ message }}
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-
-        <form method="POST">
-            <div class="mb-3">
-                <label>用户名</label>
-                <input type="text" name="username" class="form-control" required>
+    <div class="auth-card">
+        <div class="auth-sidebar">
+            <div class="brand-icon"><i class="fas fa-tv"></i></div>
+            <h3 class="fw-bold">数学课代表</h3>
+            <p class="mt-2 opacity-75">高效 · 硬核 · 极速上岸</p>
+        </div>
+        <div class="auth-form-box">
+            <div class="form-title">欢迎回来</div>
+            <form method="POST">
+                <div class="input-group-custom">
+                    <i class="fas fa-user input-icon"></i>
+                    <input type="text" name="username" class="form-control-custom" placeholder="请输入账号 / 用户名" required>
+                </div>
+                <div class="input-group-custom">
+                    <i class="fas fa-lock input-icon"></i>
+                    <input type="password" name="password" class="form-control-custom" placeholder="请输入密码" required>
+                </div>
+                <button type="submit" class="btn-bili">登录</button>
+            </form>
+            <div class="auth-footer">
+                还没有账号？ <a href="/register" class="auth-link">立即注册</a>
             </div>
-            <div class="mb-4">
-                <label>密码</label>
-                <input type="password" name="password" class="form-control" required>
-            </div>
-            <div class="d-grid">
-                <button type="submit" class="btn btn-pink btn-lg">登 录</button>
-            </div>
-        </form>
-        <div class="text-center mt-3">
-            <a href="/register" class="text-decoration-none text-muted">还没有账号？去注册</a>
         </div>
     </div>
 </body>
