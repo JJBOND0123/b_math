@@ -96,11 +96,11 @@
 
     let radarChart, keywordChart;
     const METRICS = [
-        {key: 'view',  label: '传播力 (播放)',   formula: 'view_count 总和',                         desc: '覆盖面：累计播放量'},
-        {key: 'rate',  label: '质量 (收藏率)',   formula: 'favorite_count ÷ view_count',            desc: '认可度：单次播放带来的收藏占比'},
-        {key: 'inter', label: '互动热度',       formula: '(弹幕数 + 评论数) ÷ 视频数 ÷ 2',         desc: '讨论度：每条视频的平均互动'},
-        {key: 'depth', label: '深度收藏',       formula: '收藏数 ÷ 视频总时长(小时)',               desc: '含金量：每小时内容带来的收藏'},
-        {key: 'active',label: '创作活跃',       formula: '视频数 ÷ 发布天数 × 7（视频/周）',        desc: '频率：平均每周的发片量'}
+        {key: 'view',  label: '播放量',     formula: 'view_count 总和'},
+        {key: 'rate',  label: '收藏率',     formula: 'favorite_count ÷ view_count'},
+        {key: 'inter', label: '互动均值',   formula: '(弹幕数 + 评论数) ÷ 视频数 ÷ 2'},
+        {key: 'depth', label: '收藏/小时',  formula: '收藏数 ÷ 视频总时长(小时)'},
+        {key: 'active',label: '视频/周',    formula: '视频数 ÷ 发布天数 × 7'}
     ];
 
     $(document).ready(function() {
@@ -220,7 +220,6 @@
                 <tr class="data-row">
                     <td class="data-cell cell-label">
                         <div class="metric-label" title="公式：${m.formula}">${m.label}</div>
-                        <div class="metric-desc">${m.desc}</div>
                     </td>
                     <td class="data-cell cell-val-blue">${v1}</td>
                     <td class="data-cell cell-val-pink">${v2}</td>
