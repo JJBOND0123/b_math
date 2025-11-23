@@ -96,11 +96,11 @@
 
     let radarChart, keywordChart;
     const METRICS = [
-        {key: 'view', label: '传播力 (播放)'},
-        {key: 'rate', label: '质量 (收藏率)'},
-        {key: 'inter', label: '热度 (互动)'},
-        {key: 'fav', label: '硬核度 (收藏)'},
-        {key: 'count', label: '活跃度 (产出)'}
+        {key: 'view',  label: '传播力 (播放)',       formula: 'view_count 总和'},
+        {key: 'rate',  label: '质量 (收藏率)',       formula: 'favorite_count ÷ view_count'},
+        {key: 'inter', label: '互动热度',           formula: '(弹幕数 + 评论数) ÷ 视频数 ÷ 2'},
+        {key: 'depth', label: '深度收藏',           formula: '收藏数 ÷ 视频总时长(小时)'},
+        {key: 'active',label: '创作活跃',           formula: '视频数 ÷ 发布天数 × 7（每周发片）'}
     ];
 
     $(document).ready(function() {
@@ -138,18 +138,21 @@
     function renderRadar(name1, name2, data1, data2) {
         const option = {
             color: ['#00AEEC', '#FB7299'],
-            tooltip: { trigger: 'item' },
+            tooltip: {
+                trigger: 'item',
+                formatter: function (params) {
+                    const lines = params.value.map((v, idx) => {
+                        const m = METRICS[idx];
+                        return `${m.label}：${v.toFixed(1)} / 100<br/><span style="color:#999;">公式：${m.formula}</span>`;
+                    });
+                    return `<div style="min-width:220px;"><strong>${params.name}</strong><br/>${lines.join('<br/>')}</div>`;
+                }
+            },
             legend: { bottom: 0, icon: 'circle', itemGap: 20 },
             radar: {
                 radius: '70%',
                 center: ['50%', '50%'],
-                indicator: [
-                    { name: '传播力', max: 100 },
-                    { name: '内容质量', max: 100 },
-                    { name: '讨论热度', max: 100 },
-                    { name: '硬核程度', max: 100 },
-                    { name: '活跃程度', max: 100 }
-                ],
+                indicator: METRICS.map(m => ({ name: m.label, max: 100 })),
                 axisName: { color: '#666', fontSize: 12, fontWeight: 'bold' },
                 splitArea: { show: true, areaStyle: { color: ['#fff', '#fcfcfc'] } },
                 axisLine: { lineStyle: { color: '#eee' } }
@@ -227,9 +230,10 @@
         if(!item) return '-';
         let v = item.value;
         let u = item.unit;
-        if(u.includes('播放') && v > 10000) return (v/10000).toFixed(1) + 'w';
-        if(u === '%') return parseFloat(v).toFixed(1) + '%';
-        return v;
+        if(typeof v === 'number' && u === '%') return v.toFixed(1) + '%';
+        if(typeof v === 'number' && u && u.includes('播放') && v > 10000) return (v/10000).toFixed(1) + 'w';
+        if(typeof v === 'number' && v % 1 !== 0) return v.toFixed(1) + (u ? u : '');
+        return u ? `${v}${u}` : v;
     }
 
     window.addEventListener('resize', function() {

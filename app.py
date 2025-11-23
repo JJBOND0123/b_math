@@ -328,68 +328,90 @@ def compare_data():
         func.sum(Video.reply_count).label('total_reply'),
         func.sum(Video.danmaku_count).label('total_danmaku'),
         func.sum(Video.share_count).label('total_share'),
-        func.sum(Video.coin_count).label('total_coin')
+        func.sum(Video.coin_count).label('total_coin'),
+        func.sum(Video.duration).label('total_duration'),
+        func.min(Video.pubdate).label('first_pub')
     ).group_by(Video.up_name).all()
 
     summary_map = {s.up_name: s for s in summaries}
-
+    stat_cache = {}
     def safe_rate(numerator, denominator):
         """分母为 0 时返回 0，避免抛异常。"""
         return round((numerator / denominator) * 100, 2) if denominator else 0
 
     def normalize(value, max_value):
         """将指标压缩到 0-100：用对数平滑缩小极端差距。"""
-        # 1. 如果基准值为0，无法计算，返回0
         if not max_value or max_value <= 0:
             return 0
-
-        # 2. 核心修改：使用对数平滑处理
-        # value + 1 是为了防止 log(0) 报错
-        # 使用 math.log10 可以将 10万(5) 和 1000万(7) 的差距缩小
         val_log = math.log(value + 1) if value > 0 else 0
         max_log = math.log(max_value + 1)
-
-        # 3. 计算百分比 (Log占比)
         if max_log == 0: return 0
         score = (val_log / max_log) * 100
-
-        # 4. 视觉修正：如果是0就给5分，避免完全缩成一个点不好看
         if score < 5 and value > 0: score = 5
-
         return round(min(score, 100), 1)
 
-    # === 评分归一化基准（避免缺失的硬币/分享数据）开始 ===
-    if summaries:
-        max_views = max((s.total_views or 1) for s in summaries)
-        max_fav_rate = max(safe_rate(s.total_fav or 0, s.total_views or 1) for s in summaries)
-        max_interact = max(((s.total_reply or 0) + (s.total_danmaku or 0)) for s in summaries)
-        max_count = max((s.video_count or 1) for s in summaries)
-        max_total_fav = max((s.total_fav or 1) for s in summaries)
+    # 预计算每个 UP 的原始指标，避免重复计算
+    from datetime import datetime
+    now_dt = datetime.utcnow()
+    for s in summaries:
+        video_count = s.video_count or 0
+        total_views = s.total_views or 0
+        total_fav = s.total_fav or 0
+        total_interact = (s.total_reply or 0) + (s.total_danmaku or 0)
+        fav_rate = safe_rate(total_fav, total_views)
+        interact_avg = total_interact / max(video_count, 1) / 2  # (弹幕+评论)/视频数/2
+        duration_hours = (s.total_duration or 0) / 3600 or 0
+        depth_score = total_fav / max(duration_hours, 1)  # 收藏/时长(小时)
+        if s.first_pub:
+            days_span = max((now_dt - s.first_pub).total_seconds() / 86400, 1)
+        else:
+            days_span = 30  # 无发布时间数据时给一个平滑基准
+        activity_per_week = (video_count / days_span) * 7  # 每周发片数
+
+        stat_cache[s.up_name] = {
+            'video_count': video_count,
+            'views': total_views,
+            'fav': total_fav,
+            'fav_rate': fav_rate,
+            'interact_avg': interact_avg,
+            'depth_score': depth_score,
+            'activity': activity_per_week,
+            'total_interact': total_interact,
+            'total_duration_hours': duration_hours,
+        }
+
+    # 评分归一化基准
+    if stat_cache:
+        max_views = max(c['views'] for c in stat_cache.values()) or 1
+        max_fav_rate = max(c['fav_rate'] for c in stat_cache.values()) or 1
+        max_interact = max(c['interact_avg'] for c in stat_cache.values()) or 1
+        max_depth = max(c['depth_score'] for c in stat_cache.values()) or 1
+        max_activity = max(c['activity'] for c in stat_cache.values()) or 1
     else:
-        max_views = max_fav_rate = max_interact = max_count = max_total_fav = 1
+        max_views = max_fav_rate = max_interact = max_depth = max_activity = 1
 
     def get_up_data(up_name):
-        summary = summary_map.get(up_name)
+        summary = stat_cache.get(up_name)
         if not summary:
             return {'radar': [0] * 5, 'metrics': {}, 'words': []}
 
-        # 提取基础数据
-        total_views = summary.total_views or 0
-        video_count = summary.video_count or 0
-        total_fav = summary.total_fav or 0
-        total_interact = (summary.total_reply or 0) + (summary.total_danmaku or 0)
-
-        # 计算核心指标
-        fav_rate = safe_rate(total_fav, total_views)  # 收藏率 (质量)
+        total_views = summary['views']
+        fav_rate = summary['fav_rate']
+        inter_avg = summary['interact_avg']
+        depth_score = summary['depth_score']
+        activity = summary['activity']
+        video_count = summary['video_count']
+        total_fav = summary['fav']
+        total_interact = summary['total_interact']
 
         # 构造雷达图数据（归一化到 0-100）
-        # 顺序：传播力, 质量, 热度, 硬核度, 活跃度
+        # 顺序：传播力, 质量(收藏率), 互动热度, 深度收藏, 创作活跃
         stats = [
             normalize(total_views, max_views),
             normalize(fav_rate, max_fav_rate),
-            normalize(total_interact, max_interact),
-            normalize(total_fav, max_total_fav),
-            normalize(video_count, max_count)
+            normalize(inter_avg, max_interact),
+            normalize(depth_score, max_depth),
+            normalize(activity, max_activity)
         ]
 
         # 词云逻辑 (保持不变)
@@ -412,10 +434,10 @@ def compare_data():
         # 前端表格展示指标（Key 必须与前端一致）
         metrics = {
             'view': {'value': total_views, 'unit': '次播放'},
-            'rate': {'value': fav_rate, 'unit': '% 收藏率'},
-            'inter': {'value': total_interact, 'unit': '次互动'},
-            'fav': {'value': total_fav, 'unit': '次收藏'},
-            'count': {'value': video_count, 'unit': '个视频'}
+            'rate': {'value': fav_rate, 'unit': '%'},
+            'inter': {'value': round(inter_avg, 2), 'unit': '次/视频'},
+            'depth': {'value': round(depth_score, 2), 'unit': '收藏/小时'},
+            'active': {'value': round(activity, 2), 'unit': '视频/周'}
         }
 
         return {'radar': stats, 'metrics': metrics, 'words': word_cloud_data}
