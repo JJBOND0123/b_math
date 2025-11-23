@@ -234,11 +234,19 @@
     function formatVal(item) {
         if(!item) return '-';
         let v = item.value;
-        let u = item.unit;
-        if(typeof v === 'number' && u === '%') return v.toFixed(1) + '%';
-        if(typeof v === 'number' && u && u.includes('播放') && v > 10000) return (v/10000).toFixed(1) + 'w';
-        if(typeof v === 'number' && v % 1 !== 0) return v.toFixed(1) + (u ? u : '');
-        return u ? `${v}${u}` : v;
+        let u = item.unit || '';
+        if(typeof v !== 'number') return u ? `${v}${u}` : v;
+        if(u === '%') return v.toFixed(1) + '%';
+
+        let base = v;
+        let unitLabel = u;
+        if(Math.abs(v) >= 10000) {
+            base = v / 10000;
+            unitLabel = `万${u}`;
+        }
+        const needsDecimal = base % 1 !== 0;
+        const numStr = needsDecimal ? base.toFixed(1) : base;
+        return unitLabel ? `${numStr}${unitLabel}` : numStr;
     }
 
     window.addEventListener('resize', function() {
