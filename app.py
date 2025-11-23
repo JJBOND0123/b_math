@@ -514,9 +514,11 @@ def get_user_profile():
         UserAction.create_time.desc()).limit(20).all()
     history_videos = get_videos_from_actions(history_actions)
 
-    # 只统计能在视频库匹配到的待办，避免视频被删后计数还在
-    todo_total = len(todo_videos)
-    todo_done = sum(1 for v in todo_videos if v.get('status') == 1)
+    # 只统计能在视频库匹配到的待办；total 用未完成数量，done 用已完成数量，避免出现“列表空但计数>0”
+    pending_todos = [v for v in todo_videos if v.get('status') == 0]
+    done_todos = [v for v in todo_videos if v.get('status') == 1]
+    todo_total = len(pending_todos)
+    todo_done = len(done_todos)
 
     return jsonify({
         'user_info': {'username': user.username, 'description': user.description, 'avatar': avatar_url},
