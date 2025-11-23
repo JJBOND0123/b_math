@@ -1,3 +1,5 @@
+"""Flask 入口：处理页面路由、API 接口、用户登录与推荐逻辑。"""
+
 import os
 import time
 import jieba
@@ -15,6 +17,7 @@ from sqlalchemy import func, or_
 app = Flask(__name__)
 app.config.from_object(Config)
 
+# ---- 全局配置与安全限制 ----
 UPLOAD_FOLDER = 'static/avatars'
 ALLOWED_AVATAR_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 MAX_AVATAR_SIZE = 2 * 1024 * 1024  # 2 MB per avatar
@@ -41,18 +44,22 @@ login_manager.login_view = 'login'
 
 @login_manager.user_loader
 def load_user(user_id):
+    """Flask-Login 回调：根据 user_id 取出用户对象。"""
     return db.session.get(User, int(user_id))
 
 
 def is_hashed_password(value: str) -> bool:
+    """简单校验字符串是否看起来是 Werkzeug 生成的哈希（含多段 $）。"""
     return isinstance(value, str) and value.count("$") >= 2
 
 
 def hash_password(password: str) -> str:
+    """生成密码哈希；统一算法和盐长度，避免超出字段长度。"""
     return generate_password_hash(password, method=PASSWORD_HASH_METHOD, salt_length=PASSWORD_SALT_LENGTH)
 
 
 def verify_password(stored: str, candidate: str) -> bool:
+    """安全校验密码，遇到坏数据返回 False 而不是抛异常。"""
     if not stored or not candidate or not is_hashed_password(stored):
         return False
     try:
@@ -62,6 +69,7 @@ def verify_password(stored: str, candidate: str) -> bool:
 
 
 def username_exists(username: str, exclude_user_id: int | None = None) -> bool:
+    """用户名查重，支持排除当前用户（更新资料时使用）。"""
     if not username:
         return False
     query = User.query.filter_by(username=username)
@@ -71,18 +79,22 @@ def username_exists(username: str, exclude_user_id: int | None = None) -> bool:
 
 
 def allowed_avatar(filename: str) -> bool:
+    """文件名后缀白名单校验。"""
     return bool(filename) and '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_AVATAR_EXTENSIONS
 
 
 def get_action_record(user_id: int, bvid: str, action_type: str):
+    """获取某个用户对某个视频的指定动作记录。"""
     return UserAction.query.filter_by(user_id=user_id, bvid=bvid, action_type=action_type).first()
 
 
 def ensure_action_allowed(action_type: str) -> bool:
+    """限制可写入的动作类型，避免乱写表。"""
     return action_type in SUPPORTED_ACTIONS
 
 
 def create_action(user_id: int, bvid: str, action_type: str) -> bool:
+    """创建收藏/待看/历史记录；去重后写库。"""
     if not ensure_action_allowed(action_type) or not bvid:
         return False
     if get_action_record(user_id, bvid, action_type):
@@ -93,6 +105,7 @@ def create_action(user_id: int, bvid: str, action_type: str) -> bool:
 
 
 def delete_action(user_id: int, bvid: str, action_type: str) -> bool:
+    """删除对应动作记录。"""
     action = get_action_record(user_id, bvid, action_type)
     if not action:
         return False
@@ -102,6 +115,7 @@ def delete_action(user_id: int, bvid: str, action_type: str) -> bool:
 
 
 def bump_history(user_id: int, bvid: str) -> None:
+    """记录观看历史：若存在则更新时间，否则新增。"""
     history = get_action_record(user_id, bvid, 'history')
     if history:
         history.create_time = func.now()
@@ -119,6 +133,7 @@ def login():
         user = User.query.filter_by(username=username).first()
         if user:
             authenticated = False
+            # 历史数据可能存明文；如果是明文且校验通过，会同步升级为哈希。
             if is_hashed_password(user.password):
                 authenticated = verify_password(user.password, password)
             elif user.password == password:
@@ -194,20 +209,21 @@ def profile(): return render_template('profile.html', active='profile')
 
 @app.route('/api/stats')
 def get_stats():
-    # 1. 基础计数
+    """仪表盘数据：全局统计 + 玫瑰图 + 干货度散点图。"""
+
+    # 1) 基础计数
     total_videos = Video.query.count()
     total_teachers = db.session.query(func.count(func.distinct(Video.up_name))).scalar()
     total_views = db.session.query(func.sum(Video.view_count)).scalar() or 0
     avg_score = db.session.query(func.avg(Video.dry_goods_ratio)).scalar() or 0
 
-    # 2. 榜单数据 (Top 8)
+    # 2) 干货度榜单 (Top 8)
     top_list = Video.query.order_by(Video.dry_goods_ratio.desc()).limit(8).all()
     rank_titles = [v.title[:15] + '...' if len(v.title) > 15 else v.title for v in top_list][::-1]
     rank_scores = [v.dry_goods_ratio for v in top_list][::-1]
     rank_bvids = [v.bvid for v in top_list][::-1]
 
-    # 3. 学科分类分布（玫瑰图数据）
-    # 统计每个分类下的视频数量
+    # 3) 学科分类分布（玫瑰图数据）：phase/subject 都写进 category 以兼容旧字段
     cat_stats = db.session.query(Video.category, func.count(Video.bvid)) \
         .filter(Video.category != None, Video.category != '') \
         .group_by(Video.category).all()
@@ -215,7 +231,7 @@ def get_stats():
     # 构造 ECharts 需要的 [{name: 'xx', value: 10}, ...] 格式
     category_data = [{'name': c[0], 'value': c[1]} for c in cat_stats]
 
-    # 4. 散点图数据
+    # 4) 散点图数据：过滤掉超短或超长视频，按播放量取 Top 150
     scatter_data = []
     hot_videos = Video.query.filter(Video.duration > 300, Video.duration < 10800).order_by(
         Video.view_count.desc()).limit(150).all()
@@ -237,6 +253,8 @@ def get_stats():
 
 @app.route('/api/videos')
 def get_videos():
+    """视频列表：支持关键词、分类筛选与播放量/时间/干货度排序。"""
+
     # 获取参数
     page = request.args.get('page', 1, type=int)
     per_page = 12
@@ -246,7 +264,7 @@ def get_videos():
 
     query = Video.query
 
-    # 1. 关键词搜索 (标题 OR 标签 OR UP主)
+    # 1) 关键词搜索 (标题 OR 标签 OR UP主)
     if keyword:
         query = query.filter(or_(
             Video.title.like(f'%{keyword}%'),
@@ -254,7 +272,7 @@ def get_videos():
             Video.up_name.like(f'%{keyword}%')
         ))
 
-    # 2. 智能分类筛选（兼容 phase/subject/category）
+    # 2) 分类筛选（兼容 phase/subject/category）
     # 前端传来的 category 可能是 "升学备考"(phase)，也可能是 "考研数学"(subject)
     if category != 'all':
         query = query.filter(or_(
@@ -263,7 +281,7 @@ def get_videos():
             Video.category == category  # 兼容旧数据
         ))
 
-    # 3. 排序逻辑
+    # 3) 排序逻辑：播放量/最新/干货度（默认）
     if sort_by == 'views':
         query = query.order_by(Video.view_count.desc())
     elif sort_by == 'new':
@@ -285,6 +303,7 @@ def get_videos():
 
 @app.route('/api/hot_tags')
 def get_hot_tags():
+    """热门标签词频：取前 200 条视频的 tags 聚合后返回 Top 15。"""
     videos = Video.query.filter(Video.tags != '').limit(200).all()
     all_tags = []
     for v in videos:
@@ -296,6 +315,7 @@ def get_hot_tags():
 
 @app.route('/api/compare_data')
 def compare_data():
+    """UP 主对比：聚合播放/收藏/互动等指标，归一化后输出雷达图与词云。"""
     up1 = request.args.get('up1')
     up2 = request.args.get('up2')
 
@@ -314,9 +334,11 @@ def compare_data():
     summary_map = {s.up_name: s for s in summaries}
 
     def safe_rate(numerator, denominator):
+        """分母为 0 时返回 0，避免抛异常。"""
         return round((numerator / denominator) * 100, 2) if denominator else 0
 
     def normalize(value, max_value):
+        """将指标压缩到 0-100：用对数平滑缩小极端差距。"""
         # 1. 如果基准值为0，无法计算，返回0
         if not max_value or max_value <= 0:
             return 0
@@ -411,10 +433,11 @@ def compare_data():
 
 @app.route('/api/recommend')
 def api_recommend():
+    """推荐接口：按场景（期末/基础/习题/猜你喜欢）返回 8 个视频。"""
     scene = request.args.get('scene', 'guess')
     query = Video.query
 
-    # 1. 【期末突击】场景
+    # 1. 【期末突击】场景：看考试关键词 + 阶段=期末突击，按播放量取热门
     if scene == 'exam':
         query = query.filter(or_(
             Video.phase == '期末突击',
@@ -424,19 +447,16 @@ def api_recommend():
         ))
         query = query.order_by(Video.view_count.desc())
 
-    # 2. 【考研基础】场景 (这里是你报错的地方，已修复)
+    # 2. 【考研基础】场景：限定升学备考 + 核心科目，过滤掉过短视频
     elif scene == 'basic':
-        # 先筛选分类
         query = query.filter(
             Video.phase == '升学备考',
             Video.subject.in_(['高等数学', '线性代数', '概率论'])
         )
-        # 再筛选时长
         query = query.filter(Video.duration > 1800)
-        # 最后排序 (拆成单独一行写，就不会报 SyntaxError 了)
         query = query.order_by(Video.dry_goods_ratio.desc())
 
-    # 3. 【习题冲刺】场景
+    # 3. 【习题冲刺】场景：按“习题/真题”标签筛选，收藏量越高排序越前
     elif scene == 'exercise':
         query = query.filter(or_(
             Video.subject == '习题精讲',
@@ -446,7 +466,7 @@ def api_recommend():
         ))
         query = query.order_by(Video.favorite_count.desc())
 
-    # 4. 【猜你喜欢】
+    # 4. 【猜你喜欢】：有登录态就基于最近观看科目做冷启动；否则随机打散
     else:
         if current_user.is_authenticated:
             last_action = UserAction.query.filter_by(
@@ -472,10 +492,10 @@ def api_recommend():
     return jsonify([serialize_video(v) for v in videos])
 
 
-# 获取用户数据（包含 history）
 @app.route('/api/user_profile')
 @login_required
 def get_user_profile():
+    """个人中心数据：返回收藏/待办/历史及头像/简介。"""
     user = current_user
     avatar_url = f"/static/avatars/{user.avatar}" if user.avatar else "https://placehold.co/100x100/00A1D6/FFFFFF?text=User"
 
@@ -506,8 +526,8 @@ def get_user_profile():
     })
 
 
-# 辅助函数：从 Action 列表查视频
 def get_videos_from_actions(actions, include_status=False):
+    """辅助：根据用户动作列表批量取回视频详情，必要时携带状态/时间。"""
     if not actions: return []
     bvids = [a.bvid for a in actions]
     video_map = {v.bvid: v for v in Video.query.filter(Video.bvid.in_(bvids)).all()}
@@ -522,10 +542,10 @@ def get_videos_from_actions(actions, include_status=False):
     return result
 
 
-# 新增：记录历史接口
 @app.route('/api/log_history', methods=['POST'])
 @login_required
 def log_history():
+    """记录观看历史：前端在进入详情页时调用。"""
     data = request.json or {}
     bvid = data.get('bvid')
     if not bvid:
@@ -537,6 +557,7 @@ def log_history():
 @app.route('/api/update_profile', methods=['POST'])
 @login_required
 def update_user_profile():
+    """更新用户名/签名/头像，包含文件大小与类型校验。"""
     user = current_user
     username = request.form.get('username')
     description = request.form.get('description')
@@ -570,6 +591,7 @@ def update_user_profile():
 @app.route('/api/action', methods=['POST'])
 @login_required
 def user_action():
+    """新增收藏/待看/历史动作（历史在 log_history 也会写入）。"""
     data = request.json or {}
     bvid = data.get('bvid')
     action_type = data.get('type')
@@ -586,6 +608,7 @@ def user_action():
 @app.route('/api/remove_action', methods=['POST'])
 @login_required
 def remove_action():
+    """删除收藏/待看记录。"""
     data = request.json or {}
     bvid = data.get('bvid')
     action_type = data.get('type')
@@ -601,6 +624,7 @@ def remove_action():
 @app.route('/api/toggle_todo', methods=['POST'])
 @login_required
 def toggle_todo():
+    """切换待看状态：0<->1。"""
     data = request.json or {}
     bvid = data.get('bvid')
     if not bvid:
@@ -614,6 +638,7 @@ def toggle_todo():
 
 
 def serialize_video(v):
+    """统一的前端视频字典结构，避免重复模板拼装。"""
     up_mid = getattr(v, 'up_mid', None)
     up_face = getattr(v, 'up_face', '') or ''
     duration = v.duration or 0
