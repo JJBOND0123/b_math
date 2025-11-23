@@ -141,10 +141,13 @@
             tooltip: {
                 trigger: 'axis',
                 formatter: function (params) {
-                    // params[0] 是当前维度的点
-                    const p = params[0];
-                    const m = METRICS[p.dataIndex];
-                    return `<div><strong>${m.label}</strong><br/>得分：${p.value.toFixed(1)} / 100<br/><span style="color:#999;">公式：${m.formula}</span></div>`;
+                    // params[0] 是当前指针所在的维度
+                    const p = params[0] || {};
+                    const indicatorName = (p.indicator && p.indicator.name) || p.axisValue || p.name || '';
+                    const idx = METRICS.findIndex(m => m.label === indicatorName);
+                    const metric = METRICS[idx >= 0 ? idx : 0];
+                    const val = Array.isArray(p.value) ? (p.value[idx >= 0 ? idx : 0] || 0) : (p.value || 0);
+                    return `<div><strong>${metric.label}</strong><br/>得分：${Number(val).toFixed(1)} / 100<br/><span style="color:#999;">公式：${metric.formula}</span></div>`;
                 },
                 confine: true
             },
