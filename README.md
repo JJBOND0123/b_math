@@ -38,6 +38,57 @@ flask --app app run --debug
 7) 训练分类模型（可选）：`python train_model.py`，依赖数据库中的 `videos` 标注数据。  
 8) 运行测试（如添加后）：`pytest`
 
+## 数据库表结构
+- 默认库：`bilibili_math_db`（可用 `DATABASE_URL` / `DB_URL` 覆盖），推荐字符集 `utf8mb4`。
+- MySQL 建表语句（与 `models.py` 中的 SQLAlchemy 模型保持一致，可直接执行）：
+
+```sql
+-- 采集到的课程/题解视频
+CREATE TABLE IF NOT EXISTS `videos` (
+  `bvid` varchar(20) NOT NULL,
+  `title` varchar(255),
+  `up_name` varchar(100),
+  `up_mid` bigint,
+  `up_face` varchar(500),
+  `pic_url` varchar(500),
+  `view_count` int,
+  `danmaku_count` int,
+  `reply_count` int,
+  `favorite_count` int,
+  `coin_count` int,
+  `share_count` int,
+  `duration` int,
+  `pubdate` datetime,
+  `tags` varchar(500),
+  `category` varchar(50),
+  `phase` varchar(50),
+  `subject` varchar(50),
+  `dry_goods_ratio` float,
+  PRIMARY KEY (`bvid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- 登录用户信息
+CREATE TABLE IF NOT EXISTS `users` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `username` varchar(50),
+  `password` varchar(255),
+  `description` varchar(255),
+  `avatar` varchar(200),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- 用户行为（收藏/待看/历史）
+CREATE TABLE IF NOT EXISTS `user_actions` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `user_id` int,
+  `bvid` varchar(20),
+  `action_type` varchar(20),
+  `status` int DEFAULT 0,
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+```
+
 ## 页面效果图
 - 仪表盘（数据总览、玫瑰图、散点）：`docs/screenshots/仪表盘（数据总览、玫瑰图、散点）.png`
 - 视频检索/筛选页（排序/分页/分类）：`docs/screenshots/视频检索筛选页（排序分页分类）.png`
