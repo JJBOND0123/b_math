@@ -139,14 +139,14 @@
         const option = {
             color: ['#00AEEC', '#FB7299'],
             tooltip: {
-                trigger: 'item',
+                trigger: 'axis',
                 formatter: function (params) {
-                    const lines = params.value.map((v, idx) => {
-                        const m = METRICS[idx];
-                        return `${m.label}：${v.toFixed(1)} / 100<br/><span style="color:#999;">公式：${m.formula}</span>`;
-                    });
-                    return `<div style="min-width:220px;"><strong>${params.name}</strong><br/>${lines.join('<br/>')}</div>`;
-                }
+                    // params[0] 是当前维度的点
+                    const p = params[0];
+                    const m = METRICS[p.dataIndex];
+                    return `<div><strong>${m.label}</strong><br/>得分：${p.value.toFixed(1)} / 100<br/><span style="color:#999;">公式：${m.formula}</span></div>`;
+                },
+                confine: true
             },
             legend: { bottom: 0, icon: 'circle', itemGap: 20 },
             radar: {
