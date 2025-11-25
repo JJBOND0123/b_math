@@ -12,7 +12,7 @@
 ## 目录速览
 - `app.py`：路由、API 与业务逻辑（仪表盘、搜索、对比、推荐、用户中心）。
 - `models.py`：`videos`、`users`、`user_actions` 的 SQLAlchemy 模型。
-- `config.py`：数据库与 SecretKey 配置（支持环境变量覆盖）。
+- `config.py`：数据库与 SecretKey 配置（使用固定默认值）。
 - `spider/bilibili_api.py`：B 站搜索采集脚本，含分类映射与翻页配置。
 - `templates/`、`static/`：前端模板与静态资源（头像位于 `static/avatars`）。
 - `force_fix.py`：从 npm 镜像下载 ECharts/WordCloud 离线包到 `static/js`。
@@ -20,14 +20,12 @@
 
 ## 快速开始
 1) 环境：Python 3.10+，MySQL 5.7/8.0；创建数据库（默认 `bilibili_math_db`）并确保有写权限。  
+   建议本地启用虚拟环境：`python -m venv .venv && .\\.venv\\Scripts\\activate`
 2) 安装依赖：
 ```bash
 pip install -r requirements.txt
 ```
-3) 配置（环境变量优先于文件配置）：
-- `DATABASE_URL` / `DB_URL` 如 `mysql+pymysql://user:pwd@localhost:3306/bilibili_math_db`
-- `SECRET_KEY` / `FLASK_SECRET_KEY`
-- 爬虫：`DB_HOST`、`DB_USER`、`DB_PASSWORD`、`DB_NAME`、`DB_PORT`、`BILI_COOKIE`（请用环境变量保存真实 Cookie，不要写入仓库）
+3) 配置：直接修改代码默认值（`config.py`、`train_model.py`、`spider/bilibili_api.py`），更新数据库连接/SecretKey/Cookie；爬虫 Cookie 仅本地填写，勿提交仓库。
 4) 初始化数据库：`flask --app app run` 成功连接时会自动 `create_all()`；生产环境建议改用迁移工具。  
 5) 拉取示例数据（可选）：`python spider/bilibili_api.py`  
 6) 启动应用：
@@ -38,8 +36,13 @@ flask --app app run --debug
 7) 训练分类模型（可选）：`python train_model.py`，依赖数据库中的 `videos` 标注数据。  
 8) 运行测试（如添加后）：`pytest`
 
+## 模型训练说明
+- 预处理：jieba 分词，标题与标签拼接；过滤样本数 ≤5 的类别。
+- 模型：`TfidfVectorizer + ComplementNB` 管道，按 8:2 分层划分训练/测试集；输出 `classification_report` 并保存为 `subject_classifier.pkl`。
+- 作用：供爬虫在抓取时优先使用 ML 预测分类，置信度低再回退关键词规则。
+
 ## 数据库表结构
-- 默认库：`bilibili_math_db`（可用 `DATABASE_URL` / `DB_URL` 覆盖），推荐字符集 `utf8mb4`。
+- 默认库：`bilibili_math_db`（如需调整请修改配置文件），推荐字符集 `utf8mb4`。
 - MySQL 建表语句（与 `models.py` 中的 SQLAlchemy 模型保持一致，可直接执行）：
 
 ```sql
@@ -55,8 +58,6 @@ CREATE TABLE IF NOT EXISTS `videos` (
   `danmaku_count` int,
   `reply_count` int,
   `favorite_count` int,
-  `coin_count` int,
-  `share_count` int,
   `duration` int,
   `pubdate` datetime,
   `tags` varchar(500),
@@ -104,10 +105,12 @@ CREATE TABLE IF NOT EXISTS `user_actions` (
 
 ## 依赖说明
 - 安装入口：`pip install -r requirements.txt`
-- 关键运行依赖：Flask、Flask-Login、Flask-SQLAlchemy、SQLAlchemy、PyMySQL、requests、jieba
+- 关键运行依赖：Flask、Flask-Login、Flask-SQLAlchemy、SQLAlchemy、PyMySQL、requests、urllib3、jieba、pandas、scikit-learn、joblib、Pillow
 - 开发/测试：pytest
 
 ## 开发提示
-- 避免提交真实数据库凭据、SECRET_KEY 与 B 站 Cookie，统一用环境变量。
+- 避免提交真实数据库凭据、SECRET_KEY 与 B 站 Cookie，相关配置请本地修改后勿提交仓库。
+- 注册表单仅需输入用户名与密码，用户名重复会给出中文提示（无额外强校验/条款勾选）。
+- 页面静态资源均使用本地 `static/` 目录（Bootstrap、FontAwesome、ECharts/WordCloud 等），如需重新拉取可运行 `python force_fix.py`。
 - 若 CDN 访问受限，可运行 `python force_fix.py` 重新下载 ECharts/WordCloud 静态文件。
 - 收藏/待看/历史、个人信息更新等接口均在 `app.py`（`/api/action`、`/api/log_history`、`/api/user_profile` 等），便于按需扩展。
