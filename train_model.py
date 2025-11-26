@@ -1,7 +1,5 @@
 """文本分类模型训练脚本：基于数据库中的视频标题/标签，训练科目分类器。"""
 
-import os
-
 import jieba
 import joblib
 import pandas as pd
@@ -12,21 +10,18 @@ from sklearn.model_selection import train_test_split
 from sklearn.naive_bayes import ComplementNB
 from sklearn.pipeline import make_pipeline
 
-# 数据库配置（可用环境变量覆盖）
+# 数据库配置（固定值）
 DB_CONFIG = {
-    "host": os.getenv("DB_HOST", "localhost"),
-    "user": os.getenv("DB_USER", "root"),
-    "password": os.getenv("DB_PASSWORD", "123456"),
-    "db": os.getenv("DB_NAME", "bilibili_math_db"),
-    "charset": os.getenv("DB_CHARSET", "utf8mb4")
+    "host": "localhost",
+    "user": "root",
+    "password": "123456",
+    "db": "bilibili_math_db",
+    "charset": "utf8mb4"
 }
 
 
 def build_db_url() -> str:
-    """拼接 MySQL 连接串，优先使用 DATABASE_URL/DB_URL。"""
-    env_url = os.getenv("DATABASE_URL") or os.getenv("DB_URL")
-    if env_url:
-        return env_url
+    """拼接 MySQL 连接串。"""
     return f"mysql+pymysql://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}/{DB_CONFIG['db']}?charset={DB_CONFIG['charset']}"
 
 

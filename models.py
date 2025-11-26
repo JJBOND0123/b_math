@@ -25,8 +25,6 @@ class Video(db.Model):
     danmaku_count = db.Column(db.Integer)
     reply_count = db.Column(db.Integer)
     favorite_count = db.Column(db.Integer)
-    coin_count = db.Column(db.Integer)
-    share_count = db.Column(db.Integer)
 
     duration = db.Column(db.Integer)        # 视频时长（秒）
     pubdate = db.Column(db.DateTime, index=True)        # 发布时间

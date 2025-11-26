@@ -27,6 +27,7 @@ MAX_AVATAR_SIZE = 2 * 1024 * 1024  # 2 MB per avatar
 PASSWORD_HASH_METHOD = "pbkdf2:sha256:260000"
 PASSWORD_SALT_LENGTH = 8  # keep hash length within DB column limits
 SUPPORTED_ACTIONS = {'fav', 'todo', 'history'}
+HISTORY_LIMIT = 200  # 返回给前端的学习足迹条数上限，避免过大响应
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -325,6 +326,8 @@ def compare_data():
     """UP 主对比：聚合播放/收藏/互动等指标，归一化后输出雷达图与词云。"""
     up1 = request.args.get('up1')
     up2 = request.args.get('up2')
+    if not up1 or not up2:
+        return jsonify({'msg': '缺少 up 参数'}), 400
 
     # 计算各 UP 真实数据的聚合，避免模拟占位
     summaries = db.session.query(
@@ -334,8 +337,6 @@ def compare_data():
         func.sum(Video.favorite_count).label('total_fav'),
         func.sum(Video.reply_count).label('total_reply'),
         func.sum(Video.danmaku_count).label('total_danmaku'),
-        func.sum(Video.share_count).label('total_share'),
-        func.sum(Video.coin_count).label('total_coin'),
         func.sum(Video.duration).label('total_duration'),
         func.min(Video.pubdate).label('first_pub')
     ).group_by(Video.up_name).all()
@@ -396,6 +397,10 @@ def compare_data():
         max_activity = max(c['activity'] for c in stat_cache.values()) or 1
     else:
         max_views = max_fav_rate = max_interact = max_depth = max_activity = 1
+
+    missing = [u for u in (up1, up2) if u not in stat_cache]
+    if missing:
+        return jsonify({'msg': "未找到 UP：" + ", ".join(missing)}), 404
 
     def get_up_data(up_name):
         summary = stat_cache.get(up_name)
@@ -538,23 +543,27 @@ def get_user_profile():
         UserAction.create_time.desc()).all()
     todo_videos = get_videos_from_actions(todo_actions, include_status=True)
 
-    # 3. 历史记录
-    history_actions = UserAction.query.filter_by(user_id=user.id, action_type='history').order_by(
-        UserAction.create_time.desc()).limit(20).all()
+    # 3. 历史记录（限制返回条数，避免响应过大）
+    history_query = UserAction.query.filter_by(user_id=user.id, action_type='history').order_by(
+        UserAction.create_time.desc())
+    history_total = history_query.count()
+    history_actions = history_query.limit(HISTORY_LIMIT).all()
     history_videos = get_videos_from_actions(history_actions)
 
     # 只统计能在视频库匹配到的待办；total 用未完成数量，done 用已完成数量，避免出现“列表空但计数>0”
     pending_todos = [v for v in todo_videos if v.get('status') == 0]
     done_todos = [v for v in todo_videos if v.get('status') == 1]
-    todo_total = len(pending_todos)
+    todo_pending = len(pending_todos)
     todo_done = len(done_todos)
+    todo_total = todo_pending + todo_done
 
     return jsonify({
         'user_info': {'username': user.username, 'description': user.description, 'avatar': avatar_url},
         'favorites': fav_videos,
         'todos': todo_videos,
         'history': history_videos,  # 返回历史数据
-        'todo_stats': {'total': todo_total, 'done': todo_done}
+        'history_total': history_total,
+        'todo_stats': {'total': todo_total, 'pending': todo_pending, 'done': todo_done}
     })
 
 
@@ -567,10 +576,19 @@ def get_videos_from_actions(actions, include_status=False):
     for action in actions:
         if action.bvid in video_map:
             v_data = serialize_video(video_map[action.bvid])
-            if include_status: v_data['status'] = action.status
-            # 增加记录时间，用于前端显示“X分钟前观看”
-            v_data['action_time'] = action.create_time.strftime('%Y-%m-%d %H:%M')
-            result.append(v_data)
+        else:
+            # fallback：视频不在库里时也返回占位，避免前端列表空白
+            v_data = {
+                'bvid': action.bvid,
+                'title': '视频不存在或未收录',
+                'pic_url': 'https://placehold.co/320x200/eee/999?text=Missing',
+                'link': f"https://www.bilibili.com/video/{action.bvid}"
+            }
+        if include_status:
+            v_data['status'] = getattr(action, 'status', None)
+        # 增加记录时间，用于前端显示“X分钟前观看”
+        v_data['action_time'] = action.create_time.strftime('%Y-%m-%d %H:%M')
+        result.append(v_data)
     return result
 
 
@@ -578,12 +596,20 @@ def get_videos_from_actions(actions, include_status=False):
 @login_required
 def log_history():
     """记录观看历史：前端在进入详情页时调用。"""
-    data = request.json or {}
-    bvid = data.get('bvid')
+    data = request.get_json(silent=True) or {}
+    bvid = data.get('bvid') or request.form.get('bvid')
     if not bvid:
         return jsonify({'msg': '缺少 bvid'}), 400
     bump_history(current_user.id, bvid)
     return jsonify({'msg': '记录成功'})
+
+
+@app.route('/go/<bvid>')
+@login_required
+def go_bvid(bvid):
+    """跳转前记录足迹，确保所有从站内点击的视频都会留痕。"""
+    bump_history(current_user.id, bvid)
+    return redirect(f"https://www.bilibili.com/video/{bvid}")
 
 
 @app.route('/api/update_profile', methods=['POST'])
@@ -691,10 +717,8 @@ def serialize_video(v):
         'pic_url': v.pic_url,
         'view_count': v.view_count or 0,
         'favorite_count': v.favorite_count or 0,
-        'coin_count': v.coin_count or 0,
         'reply_count': v.reply_count or 0,
         'danmaku_count': v.danmaku_count or 0,
-        'share_count': v.share_count or 0,
         'dry_goods_ratio': v.dry_goods_ratio,
         'category': category,
         'duration': duration,

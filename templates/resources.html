@@ -333,14 +333,14 @@
             <div class="col-md-3 col-sm-6">
                 <div class="bili-card">
                     <div class="card-img-box">
-                        <a href="${v.link}" target="_blank" onclick="logHistory('${v.bvid}')">
+                        <a href="/go/${v.bvid}" target="_blank">
                             <img src="${picUrl}" referrerpolicy="no-referrer" onerror="this.src='https://placehold.co/320x200/F6F7F8/9499A0?text=Error'">
                         </a>
                         <div class="duration-badge">${badgeText || 'HD'}</div>
                     </div>
 
                     <div class="card-info">
-                        <a href="${v.link}" target="_blank" class="card-title" title="${v.title}" onclick="logHistory('${v.bvid}')">
+                        <a href="/go/${v.bvid}" target="_blank" class="card-title" title="${v.title}">
                             ${v.title}
                         </a>
 

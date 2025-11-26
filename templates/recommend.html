@@ -138,13 +138,13 @@
                 <div class="col-md-3 col-sm-6">
                     <div class="video-card">
                         <div class="card-cover">
-                            <a href="${v.link}" target="_blank" onclick="logAction('${v.bvid}')">
+                            <a href="/go/${v.bvid}" target="_blank">
                                 <img src="${pic}" referrerpolicy="no-referrer" onerror="this.src='https://placehold.co/320x200/eee/999?text=Error'">
                             </a>
                             <div class="duration">${badge || 'HD'}</div>
                         </div>
                         <div class="card-body">
-                            <a href="${v.link}" target="_blank" class="card-title" title="${v.title}" onclick="logAction('${v.bvid}')">
+                            <a href="/go/${v.bvid}" target="_blank" class="card-title" title="${v.title}">
                                 ${v.title}
                             </a>
 

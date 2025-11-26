@@ -307,7 +307,9 @@
         setTimeout(() => { $('#' + targetId).addClass('show active'); }, 50);
     }
 
+    const DONE_SLICE = 12; // 默认展示的已完成条数
     let todoBvids = new Set();
+    let fullDoneList = [];
 
     function loadProfile() {
         // 显示骨架屏
@@ -316,6 +318,9 @@
         $.get('/api/user_profile', function(data) {
             let info = data.user_info;
             let stats = data.todo_stats;
+            const pendingCount = stats.pending ?? stats.total ?? 0;
+            const doneCount = stats.done ?? 0;
+            const totalCount = stats.total ?? (pendingCount + doneCount);
 
             // 更新头部
             $('#user-name').text(info.username);
@@ -328,11 +333,11 @@
 
             // 动画更新数字
             animateValue('stat-fav-count', 0, data.favorites.length, 800);
-            animateValue('stat-todo-total', 0, stats.total, 800);
-            animateValue('stat-todo-done', 0, stats.done, 800);
+            animateValue('stat-todo-total', 0, pendingCount, 800);
+            animateValue('stat-todo-done', 0, doneCount, 800);
 
             // 更新进度条
-            let percent = stats.total > 0 ? Math.round(stats.done / stats.total * 100) : 0;
+            let percent = totalCount > 0 ? Math.round(doneCount / totalCount * 100) : 0;
             $('#progress-text').text(percent + '%');
             $('#progress-bar').css('width', percent + '%');
 
@@ -342,6 +347,7 @@
 
             let pendingTodos = data.todos.filter(t => t.status === 0);
             let doneTodos = data.todos.filter(t => t.status === 1);
+            fullDoneList = doneTodos;
 
             // 渲染列表
             renderGrid(pendingTodos, '#todo-grid', 'todo');
@@ -384,23 +390,31 @@
         let container = $(containerId);
         if (!list || list.length === 0) { container.html(emptyState()); return; }
 
+        let displayList = list;
+        let hasMore = false;
+        if (type === 'done' && list.length > DONE_SLICE) {
+            displayList = list.slice(0, DONE_SLICE);
+            hasMore = true;
+        }
+        const viewType = type === 'done_all' ? 'done' : type;
+
         let html = '';
-        list.forEach(v => {
+        displayList.forEach(v => {
             let picUrl = v.pic_url || 'https://placehold.co/320x200/F6F7F8/9499A0?text=No+Img';
             let actionHtml = '';
 
-            if (type === 'todo') {
+            if (viewType === 'todo') {
                 actionHtml = `
                     <div class="action-bar">
                         <div class="btn-mini done" onclick="toggleTodo('${v.bvid}')"><i class="far fa-check-circle"></i> 完成</div>
                         <div class="btn-mini del" onclick="removeAction('${v.bvid}', 'todo')"><i class="far fa-trash-alt"></i> 移除</div>
                     </div>`;
-            } else if (type === 'done') {
+            } else if (viewType === 'done') {
                 actionHtml = `
                     <div class="action-bar">
                         <div class="btn-mini undo" onclick="toggleTodo('${v.bvid}')"><i class="fas fa-undo"></i> 撤销</div>
                     </div>`;
-            } else if (type === 'fav') {
+            } else if (viewType === 'fav') {
                 let isAdded = todoBvids.has(v.bvid);
                 let btnClass = isAdded ? 'toggle-todo-btn active' : 'toggle-todo-btn';
                 let btnIcon = isAdded ? '<i class="fas fa-check"></i>' : '<i class="fas fa-plus"></i> 待办';
@@ -413,7 +427,7 @@
                         </span>
                         <div class="${btnClass}" onclick="toggleTodoFromFav('${v.bvid}', this)">${btnIcon}</div>
                     </div>`;
-            } else if (type === 'history') {
+            } else if (viewType === 'history') {
                 actionHtml = `<div class="mt-auto text-end text-muted small" style="font-size:12px;">${v.action_time || '最近'}</div>`;
             }
 
@@ -421,17 +435,25 @@
             <div class="col-md-3 col-sm-6">
                 <div class="video-card">
                     <div class="card-cover">
-                        <a href="${v.link}" target="_blank" onclick="logHistory('${v.bvid}')">
+                        <a href="/go/${v.bvid}" target="_blank">
                             <img src="${picUrl}" referrerpolicy="no-referrer" onerror="this.src='https://placehold.co/320x200/eee/999?text=Error'">
                         </a>
                     </div>
                     <div class="card-body">
-                        <a href="${v.link}" target="_blank" class="card-title" title="${v.title}">${v.title}</a>
+                        <a href="/go/${v.bvid}" target="_blank" class="card-title" title="${v.title}">${v.title}</a>
                         ${actionHtml}
                     </div>
                 </div>
             </div>`;
         });
+
+        if (type === 'done' && hasMore) {
+            html += `
+            <div class="col-12 text-center my-3">
+                <button class="btn btn-outline-secondary btn-sm" onclick="showMoreDone()">加载更多</button>
+            </div>`;
+        }
+
         container.html(html);
     }
 
@@ -513,6 +535,11 @@
                 loadProfile();
             }
         });
+    }
+
+    function showMoreDone() {
+        if (!fullDoneList.length) return;
+        renderGrid(fullDoneList, '#done-grid', 'done_all');
     }
 
     $(document).ready(function() { loadProfile(); });

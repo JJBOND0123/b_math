@@ -21,23 +21,23 @@ ML_MODEL = None
 if os.path.exists(MODEL_PATH):
     try:
         ML_MODEL = joblib.load(MODEL_PATH)
-        print("✅ AI Model loaded successfully.")
+        print("AI 模型加载成功")
     except Exception as e:
-        print(f"⚠️ Failed to load AI model: {e}")
+        print(f"AI 模型加载失败: {e}")
 else:
-    print("⚠️ Warning: AI model not found. Running in rule-based mode.")
+    print("未找到 AI 模型，使用关键词规则模式")
 
-# === 2. 环境变量 / Cookie 配置 ===
+# === 2. Cookie/数据库配置 ===
 COOKIE = """your_cookie"""
 if not COOKIE:
     raise RuntimeError("Missing COOKIE.")
 
 DB_CONFIG = {
-    "host": os.getenv("DB_HOST", "localhost"),
-    "user": os.getenv("DB_USER", "root"),
-    "password": os.getenv("DB_PASSWORD", "123456"),
-    "db": os.getenv("DB_NAME", "bilibili_math_db"),
-    "port": int(os.getenv("DB_PORT", 3306)),
+    "host": "localhost",
+    "user": "root",
+    "password": "123456",
+    "db": "bilibili_math_db",
+    "port": 3306,
     "charset": "utf8mb4",
     "cursorclass": pymysql.cursors.DictCursor,
 }
@@ -81,7 +81,7 @@ CRAWL_CONFIG = [
     {"q": "数学建模 国赛", "phase": "高阶/竞赛", "subject": "数学建模"},
 ]
 
-MAX_PAGES = 10
+MAX_PAGES = 15
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
     "Referer": "https://www.bilibili.com/",
@@ -99,11 +99,11 @@ def save_to_mysql(data_list):
             sql = """
             INSERT INTO videos (
                 bvid, title, up_name, up_mid, up_face, pic_url, view_count, danmaku_count,
-                reply_count, favorite_count, coin_count, share_count,
+                reply_count, favorite_count,
                 duration, pubdate, tags, 
                 category, phase, subject,
                 dry_goods_ratio
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON DUPLICATE KEY UPDATE
                 view_count = VALUES(view_count),
                 favorite_count = VALUES(favorite_count),
@@ -117,16 +117,16 @@ def save_to_mysql(data_list):
                 values.append((
                     item["bvid"], item["title"], item["up_name"], item["up_mid"], item["up_face"],
                     item["pic_url"], item["view_count"], item["danmaku_count"],
-                    item["reply_count"], item["favorite_count"], item["coin_count"], item["share_count"],
+                    item["reply_count"], item["favorite_count"],
                     item["duration"], item["pubdate"], item["tags"],
                     item["category"], item["phase"], item["subject"],
                     item["dry_goods_ratio"],
                 ))
             cursor.executemany(sql, values)
             connection.commit()
-            print(f"  ✅ Saved {len(data_list)} videos -> [{data_list[0]['phase']}] - [{data_list[0]['subject']}]")
+            print(f"  已保存 {len(data_list)} 条视频 -> [{data_list[0]['phase']}] - [{data_list[0]['subject']}]")
     except Exception as e:
-        print(f"  ❌ DB Error: {e}")
+        print(f"  数据库写入失败: {e}")
     finally:
         connection.close()
 
@@ -184,7 +184,7 @@ def smart_classify(title, tags, original_subject):
 
 def run_spider():
     """主流程：遍历关键词 -> 调用搜索 API -> 清洗/补全数据 -> 批量落库。"""
-    print("🕷️ Spider starting...")
+    print("爬虫启动...")
 
     session = requests.Session()
     retries = Retry(total=3, backoff_factor=1, status_forcelist=[500, 502, 503, 504])
@@ -195,7 +195,7 @@ def run_spider():
         phase = config["phase"]
         subject = config["subject"]
 
-        print(f"Fetching: {keyword} -> [{phase} - {subject}]")
+        print(f"正在抓取: {keyword} -> [{phase} - {subject}]")
 
         for page in range(1, MAX_PAGES + 1):
             try:
@@ -209,12 +209,12 @@ def run_spider():
                 res_json = resp.json()
 
                 if res_json.get("code") != 0:
-                    print(f"  ⚠️ API error: {res_json.get('message')}")
+                    print(f"  接口异常: {res_json.get('message')}")
                     break
 
                 items = res_json.get("data", {}).get("result", [])
                 if not items:
-                    print("  No more data.")
+                    print("  无更多数据")
                     break
 
                 batch_data = []
@@ -229,10 +229,6 @@ def run_spider():
                     raw_subject = subject
                     final_subject = smart_classify(item["title"], item["tags"], raw_subject)
 
-                    # 填充硬币和分享（B 站搜索接口不直接给，估算值用于占位）
-                    calc_coin = int(fav * 0.42)
-                    calc_share = int(fav * 0.08)
-
                     video_data = {
                         "bvid": item["bvid"],
                         "title": item["title"].replace('<em class="keyword">', "").replace("</em>", ""),
@@ -244,8 +240,6 @@ def run_spider():
                         "danmaku_count": item.get("video_review", 0),
                         "reply_count": item.get("review", 0),
                         "favorite_count": fav,
-                        "coin_count": calc_coin,
-                        "share_count": calc_share,
                         "duration": parse_duration(item.get("duration", "0")),
                         "pubdate": parse_time(item.get("pubdate", time.time())),
                         "tags": keyword,
@@ -260,10 +254,10 @@ def run_spider():
                 save_to_mysql(batch_data)
 
             except Exception as e:
-                print(f"  ❌ Exception at page {page}: {e}")
+                print(f"  第 {page} 页异常: {e}")
                 time.sleep(5)
 
-    print("✅ Spider finished.")
+    print("爬虫结束")
 
 
 if __name__ == "__main__":
