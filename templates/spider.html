@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold text-dark mb-1"><i class="fas fa-bug text-danger me-2"></i> 爬虫任务中心</h4>
+        <p class="text-muted small mb-0">创建采集任务、查看进度与日志，抓取完成后可直接在前端浏览数据。</p>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm rounded-4 mb-3">
+    <div class="card-body">
+        <form id="spider-form" class="row g-3">
+            <div class="col-12">
+                <label class="form-label fw-semibold">自定义关键词（可选）</label>
+                <textarea id="input-keywords" class="form-control" rows="3" placeholder="不填则使用预设关键词；多关键词用换行或逗号分隔"></textarea>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label fw-semibold">每个关键词抓取页数</label>
+                <input type="number" id="input-pages" class="form-control" min="1" max="15" value="3">
+                <div class="form-text">B 站接口最多建议 15 页，建议 3-5 页快速体验。</div>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label fw-semibold">写入数据库</label>
+                <div class="form-check mt-2">
+                    <input class="form-check-input" type="checkbox" id="input-save" checked>
+                    <label class="form-check-label" for="input-save">保存到数据库（videos 表）</label>
+                </div>
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <div>
+                    <button type="submit" class="btn btn-bili me-2" id="btn-start">开始任务</button>
+                    <button type="button" class="btn btn-outline-danger" id="btn-cancel" disabled>取消任务</button>
+                </div>
+            </div>
+        </form>
+        <div class="mt-2 small text-muted" id="current-task-label"></div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="fw-bold mb-0">进度</h6>
+                    <span class="badge bg-secondary" id="status-badge">idle</span>
+                </div>
+                <div class="progress" style="height: 18px;">
+                    <div id="spider-progress" class="progress-bar bg-success" role="progressbar" style="width: 0%;">0%</div>
+                </div>
+                <div class="mt-3">
+                    <h6 class="fw-bold">最新日志</h6>
+                    <pre class="bg-light rounded-3 p-2 small" style="height: 200px; overflow: auto;" id="spider-logs">等待任务开始...</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-8">
+        <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="fw-bold mb-0">采集结果</h6>
+                    <div class="text-muted small" id="result-count">0 条</div>
+                </div>
+                <div class="table-responsive" style="max-height: 420px;">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                        <tr>
+                            <th>BVID</th>
+                            <th>标题</th>
+                            <th>UP</th>
+                            <th>播放</th>
+                            <th>收藏</th>
+                            <th>标签</th>
+                            <th>分类</th>
+                        </tr>
+                        </thead>
+                        <tbody id="spider-table-body">
+                        <tr><td colspan="7" class="text-center text-muted py-4">暂无数据</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/spider.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.initSpiderPage) {
+        window.initSpiderPage();
+    }
+});
+</script>
+{% endblock %}

@@ -1,4 +1,4 @@
-"""B 站采集脚本：按配置关键词抓取视频 -> 估算核心指标 -> 智能分类 -> 写入 MySQL。"""
+"""B 站采集脚本：按配置关键词抓取视频 -> 计算核心指标 -> 智能分类 -> 写入 MySQL。"""
 
 import os
 import random
@@ -12,11 +12,11 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 import urllib3
 
-# 采集时会使用 verify=False 规避部分地区的证书问题，这里提前关掉告警。
+# 采集时会使用 verify=False 规避部分地区的证书问题，这里提前关闭告警。
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-# === 1. 加载可选的文本分类模型（没有也能运行，退回关键字规则） ===
-MODEL_PATH = 'subject_classifier.pkl'
+# === 1. 加载可选的文本分类模型（没有也能运行，退回关键词规则模式） ===
+MODEL_PATH = "subject_classifier.pkl"
 ML_MODEL = None
 if os.path.exists(MODEL_PATH):
     try:
@@ -28,7 +28,7 @@ else:
     print("未找到 AI 模型，使用关键词规则模式")
 
 # === 2. Cookie/数据库配置 ===
-COOKIE = """your_cookie"""
+COOKIE = """buvid3=5FE1AD61-24A7-EFF1-ADC1-B601351A64B045266infoc; b_nut=1762067345; _uuid=C10A65D4C-7109E-1018D-B39E-962E5A645310947037infoc; buvid4=5C8A9777-82F4-8E73-D1FB-4562D5C89E2E81922-025101318-YrurpcNiUaxvNzgYzwCyJQ%3D%3D; buvid_fp=71eb915647f3446ab6704685cc0aa13e; rpdid=|(umRY)|JmYl0J'u~Yk|Y~J~u; DedeUserID=288417099; DedeUserID__ckMd5=c6f4cb34e9cb5b5b; theme-tip-show=SHOWED; theme-avatar-tip-show=SHOWED; theme-switch-show=SHOWED; CURRENT_QUALITY=127; ogv_device_support_hdr=0; CURRENT_FNVAL=4048; theme_style=dark; bp_t_offset_288417099=1138526462152802304; bili_ticket=eyJhbGciOiJIUzI1NiIsImtpZCI6InMwMyIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NjQyODM5ODQsImlhdCI6MTc2NDAyNDcyNCwicGx0IjotMX0.VuCWcM0eedGBqpGHGlpYippvV5Tba9BnhXDrVzwjsVw; bili_ticket_expires=1764283924; SESSDATA=3f09c8ce%2C1779577077%2Caf887%2Ab2CjBHjKduU90D4y5aIpU-bIZ4sHvIbpNpecfjM0peSCs5j8O_eyyiMqu6_99k9TX5GsgSVmFrM0I0ZC16TGhGdnpha0pIVjhrVVp5TmpWRW53RUFxQzVJMmdNWm9uRm8zV21PTEdpeERDakU2Sk93Z1FtUVJGdEJ5NzgwalZOSkRuU0g2alYwSXZnIIEC; bili_jct=0c21adfb37636bffa63cc3036d16d860; sid=4skv666r; b_lsid=B8E1CA67_19AC125CFEE; bmg_af_switch=1; bmg_src_def_domain=i0.hdslb.com; home_feed_column=4; browser_resolution=937-863"""
 if not COOKIE:
     raise RuntimeError("Missing COOKIE.")
 
@@ -42,25 +42,24 @@ DB_CONFIG = {
     "cursorclass": pymysql.cursors.DictCursor,
 }
 
-# === 3. 关键词与分类映射配置（方便答辩说明“为什么会有这些分类”） ===
+# === 3. 关键词与分类映射配置 ===
 CRAWL_CONFIG = [
     # 校内同步：基础课与典型难点
-    {"q": "高等数学 同济版", "phase": "校内同步", "subject": "高等数学"},
+    {"q": "高等数学 同济第五版", "phase": "校内同步", "subject": "高等数学"},
     {"q": "宋浩 高数", "phase": "校内同步", "subject": "高等数学"},
-    {"q": "线性代数同步", "phase": "校内同步", "subject": "线性代数"},
+    {"q": "线性代数 同步", "phase": "校内同步", "subject": "线性代数"},
     {"q": "宋浩 线性代数", "phase": "校内同步", "subject": "线性代数"},
-    {"q": "概率论与数理统计 浙大", "phase": "校内同步", "subject": "概率论"},
-    {"q": "宋浩 概率论", "phase": "校内同步", "subject": "概率论"},
+    {"q": "概率论与数理统计 浙大", "phase": "校内同步", "subject": "概率论与数理统计"},
+    {"q": "宋浩 概率论", "phase": "校内同步", "subject": "概率论与数理统计"},
     {"q": "泰勒公式 讲解", "phase": "校内同步", "subject": "高等数学"},
     {"q": "中值定理证明", "phase": "校内同步", "subject": "高等数学"},
     {"q": "二重积分", "phase": "校内同步", "subject": "高等数学"},
     {"q": "特征值与特征向量", "phase": "校内同步", "subject": "线性代数"},
-    {"q": "极大似然估计", "phase": "校内同步", "subject": "概率论"},
+    {"q": "极大似然估计", "phase": "校内同步", "subject": "概率论与数理统计"},
     {"q": "高数 期末复习", "phase": "校内同步", "subject": "期末突击"},
     {"q": "线性代数不挂科", "phase": "校内同步", "subject": "期末突击"},
     {"q": "概率论期末速成", "phase": "校内同步", "subject": "期末突击"},
-
-    # 升学备考：考研/专升本/名师矩阵/真题
+    # 升学备考：考研/专升本名师矩阵/真题
     {"q": "考研数学 基础", "phase": "升学备考", "subject": "考研数学"},
     {"q": "考研数学 强化", "phase": "升学备考", "subject": "考研数学"},
     {"q": "专升本数学", "phase": "升学备考", "subject": "专升本"},
@@ -68,11 +67,10 @@ CRAWL_CONFIG = [
     {"q": "汤家凤高数", "phase": "升学备考", "subject": "汤家凤"},
     {"q": "武忠祥高数", "phase": "升学备考", "subject": "武忠祥"},
     {"q": "李永乐线性代数", "phase": "升学备考", "subject": "线性代数"},
-    {"q": "余丙森概率论", "phase": "升学备考", "subject": "概率论"},
+    {"q": "余丙森概率论", "phase": "升学备考", "subject": "概率论与数理统计"},
     {"q": "考研数学 真题", "phase": "升学备考", "subject": "真题实战"},
     {"q": "1800题讲解", "phase": "升学备考", "subject": "习题精讲"},
     {"q": "660题讲解", "phase": "升学备考", "subject": "习题精讲"},
-
     # 科普与竞赛
     {"q": "3Blue1Brown 中文", "phase": "直观科普", "subject": "3Blue1Brown"},
     {"q": "线性代数的本质", "phase": "直观科普", "subject": "可视化"},
@@ -100,7 +98,7 @@ def save_to_mysql(data_list):
             INSERT INTO videos (
                 bvid, title, up_name, up_mid, up_face, pic_url, view_count, danmaku_count,
                 reply_count, favorite_count,
-                duration, pubdate, tags, 
+                duration, pubdate, tags,
                 category, phase, subject,
                 dry_goods_ratio
             ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
@@ -114,14 +112,27 @@ def save_to_mysql(data_list):
             """
             values = []
             for item in data_list:
-                values.append((
-                    item["bvid"], item["title"], item["up_name"], item["up_mid"], item["up_face"],
-                    item["pic_url"], item["view_count"], item["danmaku_count"],
-                    item["reply_count"], item["favorite_count"],
-                    item["duration"], item["pubdate"], item["tags"],
-                    item["category"], item["phase"], item["subject"],
-                    item["dry_goods_ratio"],
-                ))
+                values.append(
+                    (
+                        item["bvid"],
+                        item["title"],
+                        item["up_name"],
+                        item["up_mid"],
+                        item["up_face"],
+                        item["pic_url"],
+                        item["view_count"],
+                        item["danmaku_count"],
+                        item["reply_count"],
+                        item["favorite_count"],
+                        item["duration"],
+                        item["pubdate"],
+                        item["tags"],
+                        item["category"],
+                        item["phase"],
+                        item["subject"],
+                        item["dry_goods_ratio"],
+                    )
+                )
             cursor.executemany(sql, values)
             connection.commit()
             print(f"  已保存 {len(data_list)} 条视频 -> [{data_list[0]['phase']}] - [{data_list[0]['subject']}]")
@@ -132,12 +143,12 @@ def save_to_mysql(data_list):
 
 
 def parse_time(timestamp):
-    """B 站返回的是时间戳（秒），转成字符串方便 MySQL DATETIME。"""
+    """B 站返回的是时间戳（秒），转成字符串方便写入数据库。"""
     return datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")
 
 
 def parse_duration(duration_str):
-    """支持 '12:34'/'1:02:03' 或 int 秒，异常时回落为 0。"""
+    """支持 '12:34'/'1:02:03' 成 int 秒，异常时回落为 0。"""
     try:
         if isinstance(duration_str, int):
             return duration_str
@@ -160,6 +171,7 @@ def smart_classify(title, tags, original_subject):
     2) 预测置信度低时，退回关键词规则；仍未命中则返回原始 subject。
     """
     import jieba
+
     if ML_MODEL:
         text = title + " " + str(tags)
         cut_text = " ".join([w for w in jieba.cut(text) if len(w) > 1])
@@ -172,32 +184,52 @@ def smart_classify(title, tags, original_subject):
             pass
 
     combined = (title + str(tags)).lower()
-    if '线代' in combined or '线性代数' in combined or '矩阵' in combined:
-        return '线性代数'
-    if '高数' in combined or '高等数学' in combined or '微积分' in combined:
-        return '高等数学'
-    if '概率' in combined or '统计' in combined:
-        return '概率论'
+    if "线代" in combined or "线性代数" in combined or "矩阵" in combined:
+        return "线性代数"
+    if "高数" in combined or "高等数学" in combined or "微积分" in combined:
+        return "高等数学"
+    if "概率" in combined or "统计" in combined:
+        return "概率论与数理统计"
 
     return original_subject
 
 
-def run_spider():
-    """主流程：遍历关键词 -> 调用搜索 API -> 清洗/补全数据 -> 批量落库。"""
-    print("爬虫启动...")
+def crawl(params=None, progress_cb=None, stop_flag=None):
+    """前端可调用的抓取函数：支持进度回调和中断。"""
+    params = params or {}
+    task_list = params.get("tasks") or CRAWL_CONFIG
+    max_pages = params.get("max_pages", MAX_PAGES)
+    try:
+        max_pages = int(max_pages)
+    except Exception:
+        max_pages = MAX_PAGES
+    max_pages = max(1, min(max_pages, MAX_PAGES))
+    save_to_db = params.get("save_to_db", params.get("save", True))
+
+    if not task_list:
+        return []
 
     session = requests.Session()
     retries = Retry(total=3, backoff_factor=1, status_forcelist=[500, 502, 503, 504])
-    session.mount('https://', HTTPAdapter(max_retries=retries))
+    session.mount("https://", HTTPAdapter(max_retries=retries))
 
-    for config in CRAWL_CONFIG:
-        keyword = config["q"]
-        phase = config["phase"]
-        subject = config["subject"]
+    total_steps = max(1, len(task_list) * max_pages)
+    steps_done = 0
+    all_results = []
 
-        print(f"正在抓取: {keyword} -> [{phase} - {subject}]")
+    for config in task_list:
+        keyword = config.get("q") or config.get("keyword") or ""
+        phase = config.get("phase") or ""
+        subject = config.get("subject") or ""
+        if not keyword:
+            continue
 
-        for page in range(1, MAX_PAGES + 1):
+        if progress_cb:
+            progress_cb(steps_done, total_steps, f"开始抓取: {keyword} -> [{phase} - {subject}]")
+
+        for page in range(1, max_pages + 1):
+            if stop_flag and stop_flag.is_set():
+                break
             try:
                 url = "https://api.bilibili.com/x/web-interface/search/type"
                 params = {"search_type": "video", "keyword": keyword, "page": page, "order": "click"}
@@ -209,12 +241,14 @@ def run_spider():
                 res_json = resp.json()
 
                 if res_json.get("code") != 0:
-                    print(f"  接口异常: {res_json.get('message')}")
+                    if progress_cb:
+                        progress_cb(steps_done, total_steps, f"  接口异常: {res_json.get('message')}")
                     break
 
                 items = res_json.get("data", {}).get("result", [])
                 if not items:
-                    print("  无更多数据")
+                    if progress_cb:
+                        progress_cb(steps_done, total_steps, "  无更多数据")
                     break
 
                 batch_data = []
@@ -225,7 +259,6 @@ def run_spider():
                     mid_val = item.get("mid")
                     up_mid = int(mid_val) if mid_val else 0
 
-                    # 分类：优先机器学习，其次关键词规则
                     raw_subject = subject
                     final_subject = smart_classify(item["title"], item["tags"], raw_subject)
 
@@ -243,7 +276,6 @@ def run_spider():
                         "duration": parse_duration(item.get("duration", "0")),
                         "pubdate": parse_time(item.get("pubdate", time.time())),
                         "tags": keyword,
-                        # 分类信息
                         "category": final_subject,
                         "phase": phase,
                         "subject": final_subject,
@@ -251,12 +283,39 @@ def run_spider():
                     }
                     batch_data.append(video_data)
 
-                save_to_mysql(batch_data)
+                if save_to_db:
+                    save_to_mysql(batch_data)
+
+                all_results.extend(batch_data)
 
             except Exception as e:
-                print(f"  第 {page} 页异常: {e}")
+                if progress_cb:
+                    progress_cb(steps_done, total_steps, f"  第{page}页异常: {e}")
                 time.sleep(5)
 
+            steps_done += 1
+            if progress_cb:
+                progress_cb(steps_done, total_steps, f"{keyword} - 第{page}页完成")
+
+        if stop_flag and stop_flag.is_set():
+            if progress_cb:
+                progress_cb(steps_done, total_steps, "任务已中断")
+            break
+
+    return all_results
+
+
+def run_spider():
+    """命令行入口：完整跑一遍配置。"""
+    print("爬虫启动...")
+
+    def log_progress(done, total, log_line=None):
+        if log_line:
+            print(log_line)
+        if total:
+            print(f"进度: {done}/{total}")
+
+    crawl({"tasks": CRAWL_CONFIG, "max_pages": MAX_PAGES}, progress_cb=log_progress)
     print("爬虫结束")
 
 

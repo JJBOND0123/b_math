@@ -2,20 +2,26 @@
 
 import os
 import time
-import jieba
 import math
-from collections import Counter
 import re
+import threading
+import uuid
+from collections import Counter
+from datetime import datetime
 from io import BytesIO
+
+import jieba
 from PIL import Image
-from flask import Flask, render_template, jsonify, request, redirect, url_for, flash
+from flask import Blueprint, Flask, render_template, jsonify, request, redirect, url_for, flash
 from werkzeug.utils import secure_filename
 from werkzeug.security import check_password_hash, generate_password_hash
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
-from config import Config
-from models import db, Video, User, UserAction
 from sqlalchemy import func, or_
 from sqlalchemy.exc import IntegrityError
+
+from config import Config
+from models import db, Video, User, UserAction
+from spider.bilibili_api import crawl
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -50,6 +56,93 @@ login_manager.login_view = 'login'
 def load_user(user_id):
     """Flask-Login 回调：根据 user_id 取出用户对象。"""
     return db.session.get(User, int(user_id))
+
+# ---- 爬虫任务管理（内存版，支持前端可视化进度）----
+spider_bp = Blueprint("spider_api", __name__)
+tasks: dict[str, dict] = {}
+
+
+def run_spider_task(task_id: str, params: dict):
+    task = tasks[task_id]
+    task["status"] = "running"
+    task["progress"] = 0
+    task["message"] = ""
+    stop_flag = threading.Event()
+    task["stop_flag"] = stop_flag
+
+    def on_progress(done: int, total: int, log_line: str | None = None):
+        if total:
+            task["progress"] = min(100, max(0, int(done / total * 100)))
+        if log_line:
+            task["logs"] = (task["logs"] + [log_line])[-20:]
+
+    try:
+        data = crawl(params or {}, progress_cb=on_progress, stop_flag=stop_flag)
+        task["result"] = data
+        task["status"] = "succeeded"
+        task["progress"] = 100
+    except Exception as exc:
+        task["status"] = "failed"
+        task["message"] = str(exc)
+
+
+@spider_bp.route("/api/spider/tasks", methods=["POST"])
+@login_required
+def create_spider_task():
+    params = request.get_json(silent=True) or {}
+    task_id = str(uuid.uuid4())
+    tasks[task_id] = {
+        "status": "pending",
+        "progress": 0,
+        "message": "",
+        "logs": [],
+        "result": [],
+        "created_at": datetime.utcnow(),
+    }
+    t = threading.Thread(target=run_spider_task, args=(task_id, params), daemon=True)
+    t.start()
+    return jsonify({"task_id": task_id})
+
+
+@spider_bp.route("/api/spider/tasks/<task_id>", methods=["GET"])
+@login_required
+def get_spider_task(task_id: str):
+    task = tasks.get(task_id)
+    if not task:
+        return jsonify({"error": "not found"}), 404
+    return jsonify(
+        {
+            "status": task.get("status"),
+            "progress": task.get("progress", 0),
+            "message": task.get("message", ""),
+            "logs": task.get("logs", []),
+        }
+    )
+
+
+@spider_bp.route("/api/spider/tasks/<task_id>/data", methods=["GET"])
+@login_required
+def get_spider_task_data(task_id: str):
+    task = tasks.get(task_id)
+    if not task:
+        return jsonify({"error": "not found"}), 404
+    return jsonify({"data": task.get("result", [])})
+
+
+@spider_bp.route("/api/spider/tasks/<task_id>/cancel", methods=["POST"])
+@login_required
+def cancel_spider_task(task_id: str):
+    task = tasks.get(task_id)
+    if not task:
+        return jsonify({"error": "not found"}), 404
+    flag = task.get("stop_flag")
+    if flag:
+        flag.set()
+    task["status"] = "cancelled"
+    return jsonify({"status": "cancelled"})
+
+
+app.register_blueprint(spider_bp)
 
 
 def is_hashed_password(value: str) -> bool:
@@ -211,6 +304,11 @@ def recommend(): return render_template('recommend.html', active='recommend')
 @app.route('/profile')
 @login_required
 def profile(): return render_template('profile.html', active='profile')
+
+
+@app.route('/spider')
+@login_required
+def spider_page(): return render_template('spider.html', active='spider')
 
 
 # --- API 接口 ---
